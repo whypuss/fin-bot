@@ -134,7 +134,95 @@ def extract_ticker(text: str) -> str:
             return cand
     return ""
 
+def format_telegram_tables(text: str) -> str:
+    """
+    自動後處理：將 Markdown 原生表格 (| col1 | col2 |) 轉換為 Telegram 專用等寬盒狀邊框代碼塊
+    確保在手機與桌面 Telegram 客戶端中均有完美的對齊視覺效果，絕不換行錯位
+    """
+    if "|" not in text:
+        return text
+
+    def display_len(s: str) -> int:
+        cnt = 0
+        for ch in s:
+            cnt += 2 if ord(ch) > 127 else 1
+        return cnt
+
+    def flush_table(tbl_lines):
+        if not tbl_lines:
+            return []
+        rows = []
+        for line in tbl_lines:
+            stripped = line.strip()
+            if stripped.startswith("|") and stripped.endswith("|"):
+                stripped = stripped[1:-1]
+            cells = [c.strip() for c in stripped.split("|")]
+            if all(re.match(r"^:?-+:?$", c) for c in cells if c):
+                continue
+            rows.append(cells)
+        if not rows:
+            return tbl_lines
+
+        col_count = max(len(r) for r in rows)
+        col_widths = [0] * col_count
+        for r in rows:
+            for idx in range(col_count):
+                c = r[idx] if idx < len(r) else ""
+                col_widths[idx] = max(col_widths[idx], display_len(c))
+
+        col_widths = [max(w + 2, 6) for w in col_widths]
+
+        top_border = "┌" + "┬".join("─" * w for w in col_widths) + "┐"
+        mid_border = "├" + "┼".join("─" * w for w in col_widths) + "┤"
+        bot_border = "└" + "┴".join("─" * w for w in col_widths) + "┘"
+
+        out = ["```text", top_border]
+        for i, r in enumerate(rows):
+            line_parts = []
+            for idx in range(col_count):
+                c = r[idx] if idx < len(r) else ""
+                dlen = display_len(c)
+                pad = col_widths[idx] - dlen
+                left_pad = 1
+                right_pad = max(pad - left_pad, 0)
+                line_parts.append(" " * left_pad + c + " " * right_pad)
+            out.append("│" + "│".join(line_parts) + "│")
+            if i == 0 and len(rows) > 1:
+                out.append(mid_border)
+        out.append(bot_border)
+        out.append("```")
+        return out
+
+    lines = text.split("\n")
+    new_lines = []
+    table_buffer = []
+    in_codeblock = False
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            in_codeblock = not in_codeblock
+            if table_buffer:
+                new_lines.extend(flush_table(table_buffer))
+                table_buffer = []
+            new_lines.append(line)
+            continue
+
+        if not in_codeblock and stripped.startswith("|") and stripped.endswith("|"):
+            table_buffer.append(line)
+        else:
+            if table_buffer:
+                new_lines.extend(flush_table(table_buffer))
+                table_buffer = []
+            new_lines.append(line)
+
+    if table_buffer:
+        new_lines.extend(flush_table(table_buffer))
+
+    return "\n".join(new_lines)
+
 def send_message(chat_id: int, text: str, parse_mode: str = "Markdown", reply_markup: dict = None) -> bool:
+    text = format_telegram_tables(text)
     url = f"{API_BASE}/sendMessage"
     max_len = 3800
     
@@ -169,6 +257,7 @@ def send_message(chat_id: int, text: str, parse_mode: str = "Markdown", reply_ma
     return True
 
 def edit_message(chat_id: int, message_id: int, text: str, parse_mode: str = "Markdown", reply_markup: dict = None) -> bool:
+    text = format_telegram_tables(text)
     url = f"{API_BASE}/editMessageText"
     payload = {
         "chat_id": chat_id,
