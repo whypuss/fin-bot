@@ -136,19 +136,13 @@ def extract_ticker(text: str) -> str:
 
 def format_telegram_tables(text: str) -> str:
     """
-    自動後處理：將 Markdown 原生表格 (| col1 | col2 |) 轉換為 Telegram 專用等寬盒狀邊框代碼塊
-    確保在手機與桌面 Telegram 客戶端中均有完美的對齊視覺效果，絕不換行錯位
+    手機直屏專用自適應排版引擎：
+    將易在手機直屏嚴重擠壓、折行錯位的表格，自動轉換為 100% 垂直對齊、清爽易讀的【手機直屏結構化卡片流】
     """
-    if "|" not in text:
+    if "|" not in text and "┌" not in text:
         return text
 
-    def display_len(s: str) -> int:
-        cnt = 0
-        for ch in s:
-            cnt += 2 if ord(ch) > 127 else 1
-        return cnt
-
-    def flush_table(tbl_lines):
+    def flush_table_to_cards(tbl_lines):
         if not tbl_lines:
             return []
         rows = []
@@ -157,42 +151,80 @@ def format_telegram_tables(text: str) -> str:
             if stripped.startswith("|") and stripped.endswith("|"):
                 stripped = stripped[1:-1]
             cells = [c.strip() for c in stripped.split("|")]
+            # 過濾純分隔線
             if all(re.match(r"^:?-+:?$", c) for c in cells if c):
                 continue
             rows.append(cells)
-        if not rows:
+
+        if len(rows) < 2:
             return tbl_lines
 
-        col_count = max(len(r) for r in rows)
-        col_widths = [0] * col_count
-        for r in rows:
-            for idx in range(col_count):
-                c = r[idx] if idx < len(r) else ""
-                col_widths[idx] = max(col_widths[idx], display_len(c))
+        headers = rows[0]
+        data_rows = rows[1:]
 
-        col_widths = [max(w + 2, 6) for w in col_widths]
+        # 情況 A：兩欄式鍵值表單 (如 財務指標 | 數值)
+        if len(headers) == 2:
+            items = []
+            for r in data_rows:
+                if len(r) >= 2 and (r[0] or r[1]):
+                    items.append(f"• *{r[0]}*：`{r[1]}`")
+                elif len(r) == 1 and r[0]:
+                    items.append(f"• *{r[0]}*")
+            return ["\n" + "\n".join(items) + "\n"]
 
-        top_border = "┌" + "┬".join("─" * w for w in col_widths) + "┐"
-        mid_border = "├" + "┼".join("─" * w for w in col_widths) + "┤"
-        bot_border = "└" + "┴".join("─" * w for w in col_widths) + "┘"
+        # 情況 B：多欄同業/數據對比卡片
+        cards = []
+        for row_idx, r in enumerate(data_rows):
+            if not any(r):
+                continue
+            first_col = r[0] if len(r) > 0 else f"項目 {row_idx+1}"
+            second_col = r[1] if len(r) > 1 and len(headers) > 2 else ""
 
-        out = ["```text", top_border]
-        for i, r in enumerate(rows):
-            line_parts = []
-            for idx in range(col_count):
-                c = r[idx] if idx < len(r) else ""
-                dlen = display_len(c)
-                pad = col_widths[idx] - dlen
-                left_pad = 1
-                right_pad = max(pad - left_pad, 0)
-                line_parts.append(" " * left_pad + c + " " * right_pad)
-            out.append("│" + "│".join(line_parts) + "│")
-            if i == 0 and len(rows) > 1:
-                out.append(mid_border)
-        out.append(bot_border)
-        out.append("```")
-        return out
+            if second_col and len(first_col) < 12 and not any(ch.isdigit() for ch in second_col):
+                title = f"🏷️ *{first_col}* ({second_col})"
+                start_idx = 2
+            else:
+                title = f"🏷️ *{first_col}*"
+                start_idx = 1
 
+            card_lines = [title]
+            items = []
+            for idx in range(start_idx, len(r)):
+                val = r[idx]
+                if not val:
+                    continue
+                h_name = headers[idx] if idx < len(headers) else f"指標{idx}"
+                items.append(f"{h_name}: `{val}`")
+
+            # 兩兩一組，手機直屏絕對不超寬折行
+            for i in range(0, len(items), 2):
+                chunk = items[i:i+2]
+                card_lines.append("  • " + " ｜ ".join(chunk))
+
+            cards.append("\n".join(card_lines))
+
+        return ["\n" + "\n\n".join(cards) + "\n"]
+
+    def _parse_boxed_table_to_cards(block_str):
+        raw_lines = [l.strip() for l in block_str.split("\n") if l.strip() and not l.strip().startswith("```")]
+        content_lines = []
+        for l in raw_lines:
+            if any(edge in l for edge in ["┌", "├", "└", "┬", "┼", "┴"]):
+                continue
+            if l.startswith("│") and l.endswith("│"):
+                cells = [c.strip() for c in l[1:-1].split("│")]
+                content_lines.append("| " + " | ".join(cells) + " |")
+        if len(content_lines) >= 2:
+            sep = "| " + " | ".join(["---"] * len(content_lines[0].split("|")[1:-1])) + " |"
+            test_tbl = [content_lines[0], sep] + content_lines[1:]
+            res = flush_table_to_cards(test_tbl)
+            return "\n".join(res)
+        return block_str
+
+    # 1. 處理已存在的代碼框線表格，轉化為直屏卡片
+    text = re.sub(r"```(?:text)?\s*[\n\r]+[┌├└│─┼┬┴\s\S]+?```", lambda m: _parse_boxed_table_to_cards(m.group(0)), text)
+
+    # 2. 處理原生 markdown 表格
     lines = text.split("\n")
     new_lines = []
     table_buffer = []
@@ -203,7 +235,7 @@ def format_telegram_tables(text: str) -> str:
         if stripped.startswith("```"):
             in_codeblock = not in_codeblock
             if table_buffer:
-                new_lines.extend(flush_table(table_buffer))
+                new_lines.extend(flush_table_to_cards(table_buffer))
                 table_buffer = []
             new_lines.append(line)
             continue
@@ -212,12 +244,12 @@ def format_telegram_tables(text: str) -> str:
             table_buffer.append(line)
         else:
             if table_buffer:
-                new_lines.extend(flush_table(table_buffer))
+                new_lines.extend(flush_table_to_cards(table_buffer))
                 table_buffer = []
             new_lines.append(line)
 
     if table_buffer:
-        new_lines.extend(flush_table(table_buffer))
+        new_lines.extend(flush_table_to_cards(table_buffer))
 
     return "\n".join(new_lines)
 
