@@ -31,7 +31,26 @@ from fsi_prompts import (
     build_frontier_sector_prompt,
     build_crypto_overview_prompt,
     build_trade_analysis_prompt,
-    build_fund_flows_prompt
+    build_fund_flows_prompt,
+    # 官方核心工作流 Prompts
+    build_cim_prompt,
+    build_teaser_prompt,
+    build_buyer_list_prompt,
+    build_merger_model_prompt,
+    build_precedents_prompt,
+    build_initiation_prompt,
+    build_morning_note_prompt,
+    build_thesis_prompt,
+    build_call_prep_prompt,
+    build_ic_memo_prompt,
+    build_dd_checklist_prompt,
+    build_unit_economics_prompt,
+    build_value_creation_prompt,
+    build_meeting_prep_prompt,
+    build_gl_reconcile_prompt,
+    build_month_end_close_prompt,
+    build_statement_audit_prompt,
+    build_kyc_screen_prompt
 )
 from llm_client import LLMClient, ALL_MODELS
 
@@ -361,7 +380,193 @@ def make_home_buttons(user_id: int = 0) -> dict:
             common_bottom
         ]
 
-    # 2. 🪙 加密資產與 Web3 首席研究員 (crypto_analyst)
+    # 2. 💼 投行併購董事總經理 (pitch_agent)
+    elif active_role == "pitch_agent":
+        buttons = [
+            [
+                {"text": "📑 機密備忘錄 CIM (NVDA)", "callback_data": "act:cim:NVDA"},
+                {"text": "📄 盲測項目書 Teaser (NVDA)", "callback_data": "act:teaser:NVDA"}
+            ],
+            [
+                {"text": "🎯 潛在買方清單 (Buyer List)", "callback_data": "act:buyer_list:NVDA"},
+                {"text": "📜 先例併購交易 (Precedents)", "callback_data": "act:precedents:NVDA"}
+            ],
+            [
+                {"text": "📈 併購增厚稀釋模型 (Merger)", "callback_data": "act:merger_model:MSFT_NVDA"},
+                {"text": "⚖️ 同業可比估值 Comps", "callback_data": "act:comps:AAPL"}
+            ],
+            [
+                {"text": "⚡ 輝達 NVDA 提案", "callback_data": "pick:NVDA"},
+                {"text": "🍎 蘋果 AAPL 併購", "callback_data": "pick:AAPL"}
+            ],
+            common_nav,
+            common_bottom
+        ]
+
+    # 3. 🤝 客戶會談與簡報專家 (meeting_prep_agent)
+    elif active_role == "meeting_prep_agent":
+        buttons = [
+            [
+                {"text": "🤝 生成會面簡報包 (NVDA)", "callback_data": "act:meeting_prep:輝達 (NVIDIA)"},
+                {"text": "💼 高管交談話術 (AAPL)", "callback_data": "act:meeting_prep:蘋果 (Apple)"}
+            ],
+            [
+                {"text": "📋 客戶會議建議議程 (TSLA)", "callback_data": "act:meeting_prep:特斯拉 (Tesla)"},
+                {"text": "🎯 決策者背景與關切 (MSFT)", "callback_data": "act:meeting_prep:微軟 (Microsoft)"}
+            ],
+            [
+                {"text": "⚡ 準備輝達會談", "callback_data": "act:meeting_prep:輝達 (NVIDIA)"},
+                {"text": "🚀 準備台積電會談", "callback_data": "act:meeting_prep:台積電 (TSMC)"}
+            ],
+            common_nav,
+            common_bottom
+        ]
+
+    # 4. 🔍 賣方股票研究首席 (earnings_reviewer)
+    elif active_role == "earnings_reviewer":
+        buttons = [
+            [
+                {"text": "📰 首次覆蓋深度研報 (NVDA)", "callback_data": "act:initiation:NVDA"},
+                {"text": "⚡ 晨會操作快訊 (NVDA)", "callback_data": "act:morning_note:NVDA"}
+            ],
+            [
+                {"text": "🐂 多空極致假說 (NVDA)", "callback_data": "act:thesis:NVDA"},
+                {"text": "🎙️ 業績會高管質詢題庫", "callback_data": "act:call_prep:NVDA"}
+            ],
+            [
+                {"text": "📑 財報業績深度透視", "callback_data": "act:earnings:NVDA"},
+                {"text": "📊 賣方評級與共識預期", "callback_data": "act:comps:MSFT"}
+            ],
+            [
+                {"text": "🍎 研報覆蓋 AAPL", "callback_data": "act:initiation:AAPL"},
+                {"text": "🚗 研報覆蓋 TSLA", "callback_data": "act:initiation:TSLA"}
+            ],
+            common_nav,
+            common_bottom
+        ]
+
+    # 5. 📐 華爾街量化與建模專家 (model_builder)
+    elif active_role == "model_builder":
+        buttons = [
+            [
+                {"text": "📐 現金流折現 DCF 模型", "callback_data": "act:dcf:NVDA"},
+                {"text": "💰 槓桿收購 LBO 敏感度", "callback_data": "act:lbo:TSLA"}
+            ],
+            [
+                {"text": "📑 3-Statement 三張表", "callback_data": "act:earnings:MSFT"},
+                {"text": "⚖️ 估值倍數敏感度分析", "callback_data": "act:comps:NVDA"}
+            ],
+            [
+                {"text": "⚡ 跑 NVDA DCF 測算", "callback_data": "act:dcf:NVDA"},
+                {"text": "🚗 跑 TSLA 估值模型", "callback_data": "act:comps:TSLA"}
+            ],
+            common_nav,
+            common_bottom
+        ]
+
+    # 6. 🏛️ 私募股權基金合夥人 (valuation_reviewer)
+    elif active_role == "valuation_reviewer":
+        buttons = [
+            [
+                {"text": "📋 投委會 IC Memo (NVDA)", "callback_data": "act:ic_memo:NVDA"},
+                {"text": "🔍 360° 盡職調查清單 (DD)", "callback_data": "act:dd_checklist:NVDA"}
+            ],
+            [
+                {"text": "📊 單元經濟學模型 (Unit)", "callback_data": "act:unit_economics:NVDA"},
+                {"text": "🚀 投後100天價值創造方案", "callback_data": "act:value_creation:NVDA"}
+            ],
+            [
+                {"text": "💰 5年退出回報 IRR/MoIC", "callback_data": "act:lbo:NVDA"},
+                {"text": "🏦 頂級基金13F動向", "callback_data": "menu:fund_flows_picker"}
+            ],
+            [
+                {"text": "⚡ 審核 NVDA 標的", "callback_data": "act:ic_memo:NVDA"},
+                {"text": "🍎 審核 AAPL 標的", "callback_data": "act:ic_memo:AAPL"}
+            ],
+            common_nav,
+            common_bottom
+        ]
+
+    # 7. 📑 總帳對帳與平帳專家 (gl_reconciler)
+    elif active_role == "gl_reconciler":
+        buttons = [
+            [
+                {"text": "🔍 未平帳差異排查 (Breaks)", "callback_data": "act:gl_reconcile:跨系統交易流水與銀行子帳未平差異排查"},
+                {"text": "⏳ 在途資金跨期平帳", "callback_data": "act:gl_reconcile:在途資金跨期結算與系統截斷點核對"}
+            ],
+            [
+                {"text": "🛠️ 標準平帳調節分錄建議", "callback_data": "act:gl_reconcile:標準借貸平帳與跨期調節分錄指引"},
+                {"text": "🛡️ 內部對帳防線改善", "callback_data": "act:gl_reconcile:會計總帳核對內控規則與自動化核銷改善"}
+            ],
+            common_nav,
+            common_bottom
+        ]
+
+    # 8. 📅 月末結帳與財務營運專家 (month_end_closer)
+    elif active_role == "month_end_closer":
+        buttons = [
+            [
+                {"text": "📅 月末關帳清單與排期", "callback_data": "act:month_end_close:月度關帳工作流與應計計提檢驗清單"},
+                {"text": "📊 預算 vs 實際差異分析", "callback_data": "act:month_end_close:月度費用支出預算與實際執行差異評論"}
+            ],
+            [
+                {"text": "⏳ 應計預提項目滾動調整", "callback_data": "act:month_end_close:應計費用預提與固定資產折舊滾動審核"},
+                {"text": "⚠️ 財務關帳風險防範", "callback_data": "act:month_end_close:跨期收入確認與計提不足風險排查"}
+            ],
+            common_nav,
+            common_bottom
+        ]
+
+    # 9. ⚖️ 財務審計與 LP 核數專家 (statement_auditor)
+    elif active_role == "statement_auditor":
+        buttons = [
+            [
+                {"text": "⚖️ LP 收益分配瀑布流複核", "callback_data": "act:statement_audit:私募基金收益分配瀑布流與門檻回報率審計"},
+                {"text": "💼 管理費與績效提成核查", "callback_data": "act:statement_audit:基金管理費與附帶權益Carry計提合規核數"}
+            ],
+            [
+                {"text": "📋 資本調用通知書審核", "callback_data": "act:statement_audit:LP資本調用Capital Call與實繳出資驗證"},
+                {"text": "📑 季報向LP披露合規放行", "callback_data": "act:statement_audit:基金季度財務報表LP披露審計與簽批意見"}
+            ],
+            common_nav,
+            common_bottom
+        ]
+
+    # 10. 🛡️ 穿透式合規與 KYC 審查總監 (kyc_screener)
+    elif active_role == "kyc_screener":
+        buttons = [
+            [
+                {"text": "🛡️ 穿透式 UBO 實質受益人", "callback_data": "act:kyc_screen:跨國離岸架構穿透式最終受益所有人UBO審查"},
+                {"text": "🚨 國際制裁與 PEP 黑名單", "callback_data": "act:kyc_screen:OFAC聯合國國際制裁名單與政治公眾人物篩查"}
+            ],
+            [
+                {"text": "⚠️ 洗錢高風險紅旗預警", "callback_data": "act:kyc_screen:高風險避稅天堂註冊地與異常資金交易紅旗評估"},
+                {"text": "📋 客戶准入審批建議 (EDD)", "callback_data": "act:kyc_screen:增強型盡職調查EDD與機構客戶准入合規決策"}
+            ],
+            common_nav,
+            common_bottom
+        ]
+
+    # 11. 🛡️ 金融風控與合規總監 (risk_officer)
+    elif active_role == "risk_officer":
+        buttons = [
+            [
+                {"text": "⚠️ 標的潛在黑天鵝排查", "callback_data": "top:risks:標的下行風險與黑天鵝排查"},
+                {"text": "📉 債務違約與流動性壓力", "callback_data": "act:quote:TSLA"}
+            ],
+            [
+                {"text": "🏛️ 政策法規與反壟斷審查", "callback_data": "top:market:反壟斷監管與合規審查"},
+                {"text": "🛡️ 穿透式盡調清單 (DD)", "callback_data": "act:dd_checklist:NVDA"}
+            ],
+            [
+                {"text": "🔍 排查 NVDA 估值泡沫", "callback_data": "act:comps:NVDA"},
+                {"text": "🪙 加密合約清算擠兌風險", "callback_data": "act:crypto_overview:market"}
+            ],
+            common_nav,
+            common_bottom
+        ]
+
+    # 12. 🪙 加密資產與 Web3 首席研究員 (crypto_analyst)
     elif active_role == "crypto_analyst":
         buttons = [
             [
@@ -384,102 +589,7 @@ def make_home_buttons(user_id: int = 0) -> dict:
             common_bottom
         ]
 
-    # 3. 💼 投行併購董事總經理 (pitch_agent)
-    elif active_role == "pitch_agent":
-        buttons = [
-            [
-                {"text": "📝 撰寫併購 Pitch 提案", "callback_data": "top:memo:戰略併購與控股收購提案"},
-                {"text": "📑 投資一頁紙 One-Pager", "callback_data": "act:onepager:NVDA"}
-            ],
-            [
-                {"text": "⚖️ 同業可比估值 Comps", "callback_data": "act:comps:AAPL"},
-                {"text": "🎯 潛在買方與收購清單", "callback_data": "top:leaders:產業鏈核心並購標的"}
-            ],
-            [
-                {"text": "⚡ 輝達 NVDA 估值", "callback_data": "pick:NVDA"},
-                {"text": "🪙 Web3 企業併購估值", "callback_data": "act:crypto_overview:market"}
-            ],
-            common_nav,
-            common_bottom
-        ]
-
-    # 4. 📐 華爾街量化與建模專家 (model_builder)
-    elif active_role == "model_builder":
-        buttons = [
-            [
-                {"text": "📐 現金流折現 DCF 模型", "callback_data": "act:dcf:NVDA"},
-                {"text": "💰 槓桿收購 LBO 敏感度", "callback_data": "act:lbo:TSLA"}
-            ],
-            [
-                {"text": "📑 3-Statement 三張表", "callback_data": "act:earnings:MSFT"},
-                {"text": "⚖️ 估值倍數敏感度分析", "callback_data": "act:comps:NVDA"}
-            ],
-            [
-                {"text": "⚡ 跑 NVDA DCF 測算", "callback_data": "act:dcf:NVDA"},
-                {"text": "🚗 跑 TSLA 估值模型", "callback_data": "act:comps:TSLA"}
-            ],
-            common_nav,
-            common_bottom
-        ]
-
-    # 5. 🔍 賣方股票研究首席 (earnings_reviewer)
-    elif active_role == "earnings_reviewer":
-        buttons = [
-            [
-                {"text": "📑 財報業績深度透視", "callback_data": "act:earnings:NVDA"},
-                {"text": "⚡ 未來 2-4 季催化劑", "callback_data": "top:risks:未來業績催化劑與下行點"}
-            ],
-            [
-                {"text": "🔍 毛利率受壓與庫存體檢", "callback_data": "act:quote:AAPL"},
-                {"text": "📊 賣方評級與共識預期", "callback_data": "act:comps:MSFT"}
-            ],
-            [
-                {"text": "🍎 蘋果 AAPL 業績會", "callback_data": "act:earnings:AAPL"},
-                {"text": "⚡ 輝達 NVDA 財報透視", "callback_data": "act:earnings:NVDA"}
-            ],
-            common_nav,
-            common_bottom
-        ]
-
-    # 6. 🏛️ 私募股權基金合夥人 (valuation_reviewer)
-    elif active_role == "valuation_reviewer":
-        buttons = [
-            [
-                {"text": "💰 退出回報 IRR/MoIC 測算", "callback_data": "act:lbo:NVDA"},
-                {"text": "🏦 頂級基金13F動向", "callback_data": "menu:fund_flows_picker"}
-            ],
-            [
-                {"text": "📋 投委會 IC Memo 審批", "callback_data": "top:memo:控股型收購IC備忘錄"},
-                {"text": "🚀 挖掘冷門十倍標的", "callback_data": "menu:frontier_picker"}
-            ],
-            [
-                {"text": "🏢 標的公司護城河評估", "callback_data": "act:onepager:NVDA"},
-                {"text": "🛡️ 下行安全邊際審查", "callback_data": "act:dcf:AAPL"}
-            ],
-            common_nav,
-            common_bottom
-        ]
-
-    # 7. 🛡️ 金融風控與合規總監 (risk_officer)
-    elif active_role == "risk_officer":
-        buttons = [
-            [
-                {"text": "⚠️ 標的潛在黑天鵝排查", "callback_data": "top:risks:標的下行風險與黑天鵝排查"},
-                {"text": "📉 債務違約與流動性壓力", "callback_data": "act:quote:TSLA"}
-            ],
-            [
-                {"text": "🏛️ 政策法規與反壟斷審查", "callback_data": "top:market:反壟斷監管與合規審查"},
-                {"text": "🛡️ 穿透式盡調清單 (DD)", "callback_data": "top:memo:穿透式盡職調查清單"}
-            ],
-            [
-                {"text": "🔍 排查 NVDA 估值泡沫", "callback_data": "act:comps:NVDA"},
-                {"text": "🪙 加密合約清算擠兌風險", "callback_data": "act:crypto_overview:market"}
-            ],
-            common_nav,
-            common_bottom
-        ]
-
-    # 8. 🚢 全球貿易與跨國供應鏈首席專家 (trade_expert)
+    # 13. 🚢 全球貿易與跨國供應鏈首席專家 (trade_expert)
     elif active_role == "trade_expert":
         buttons = [
             [
@@ -771,12 +881,24 @@ def make_ticker_buttons(symbol: str) -> dict:
                 {"text": "💰 槓桿收購 LBO", "callback_data": f"act:lbo:{symbol}"}
             ],
             [
-                {"text": "📑 財報解讀", "callback_data": f"act:earnings:{symbol}"},
-                {"text": "🚀 一頁紙速覽", "callback_data": f"act:onepager:{symbol}"}
+                {"text": "📑 機密備忘錄 CIM", "callback_data": f"act:cim:{symbol}"},
+                {"text": "📰 首次覆蓋研報", "callback_data": f"act:initiation:{symbol}"}
             ],
             [
-                {"text": "🪙 加密貨幣專區", "callback_data": "menu:crypto_picker"},
-                {"text": "🌍 全球資金流動", "callback_data": "act:global_flows:market"}
+                {"text": "📋 投委會 IC Memo", "callback_data": f"act:ic_memo:{symbol}"},
+                {"text": "🤝 高管會談簡報包", "callback_data": f"act:meeting_prep:{symbol}"}
+            ],
+            [
+                {"text": "🎯 潛在買方清單", "callback_data": f"act:buyer_list:{symbol}"},
+                {"text": "⚡ 晨會操作快訊", "callback_data": f"act:morning_note:{symbol}"}
+            ],
+            [
+                {"text": "🐂 多空極致假說", "callback_data": f"act:thesis:{symbol}"},
+                {"text": "🎙️ 業績會質詢題庫", "callback_data": f"act:call_prep:{symbol}"}
+            ],
+            [
+                {"text": "🔍 360° 盡調清單", "callback_data": f"act:dd_checklist:{symbol}"},
+                {"text": "📊 單元經濟效益", "callback_data": f"act:unit_economics:{symbol}"}
             ],
             [
                 {"text": "🎭 切換專家角色", "callback_data": "menu:role_picker"},
@@ -1224,7 +1346,219 @@ def execute_action(chat_id: int, action: str, target: str, user_id: int = 0):
         send_message(chat_id, f"🚢 *全球貿易與供應鏈實戰策略報告*：\n───────────────────────\n{ans}", reply_markup=trade_markup)
         return
 
-    # 14. 關於 FinBot (普通用戶專屬)
+    # 15. 官方核心工作流：機密備忘錄 (CIM)
+    elif action == "cim":
+        send_message(chat_id, f"⏳ 正在調用【投行併購董事總經理】為標的 `{target}` 生成機密資訊備忘錄 (CIM)...")
+        send_chat_action(chat_id, "typing")
+        tdata = get_ticker_data(target)
+        prompt = build_cim_prompt(tdata)
+        ans = llm.chat_complete(current_system_prompt, prompt)
+        send_message(chat_id, f"📑 *投行機密資訊備忘錄 (CIM)*：\n───────────────────────\n{ans}", reply_markup=make_ticker_buttons(target))
+        return
+
+    # 16. 官方核心工作流：盲測項目書 (Teaser)
+    elif action == "teaser":
+        send_message(chat_id, f"⏳ 正在生成標的 `{target}` 匿名投資項目簡介 (Teaser)...")
+        send_chat_action(chat_id, "typing")
+        tdata = get_ticker_data(target)
+        prompt = build_teaser_prompt(tdata)
+        ans = llm.chat_complete(current_system_prompt, prompt)
+        send_message(chat_id, f"📄 *併購項目盲測簡介 (One-Page Teaser)*：\n───────────────────────\n{ans}", reply_markup=make_ticker_buttons(target))
+        return
+
+    # 17. 官方核心工作流：潛在買方清單 (Buyer List)
+    elif action == "buyer_list":
+        send_message(chat_id, f"⏳ 正在梳理標的 `{target}` 戰略與財務買方收購清單 (Buyer List)...")
+        send_chat_action(chat_id, "typing")
+        tdata = get_ticker_data(target)
+        prompt = build_buyer_list_prompt(tdata)
+        ans = llm.chat_complete(current_system_prompt, prompt)
+        send_message(chat_id, f"🎯 *併購潛在買方與協同效應清單*：\n───────────────────────\n{ans}", reply_markup=make_ticker_buttons(target))
+        return
+
+    # 18. 官方核心工作流：併購增厚稀釋模型 (Merger Model)
+    elif action == "merger_model":
+        parts = target.split("_") if "_" in target else ["MSFT", target]
+        acq, tgt = parts[0], parts[1]
+        send_message(chat_id, f"⏳ 正在推演收購方 `{acq}` 併購目標方 `{tgt}` 增厚稀釋模型 (Merger Model)...")
+        send_chat_action(chat_id, "typing")
+        prompt = build_merger_model_prompt(acq, tgt)
+        ans = llm.chat_complete(current_system_prompt, prompt)
+        send_message(chat_id, f"📈 *M&A 併購每股盈餘增厚/稀釋模型*：\n───────────────────────\n{ans}", reply_markup=make_ticker_buttons(tgt))
+        return
+
+    # 19. 官方核心工作流：歷史先例交易分析 (Precedents)
+    elif action == "precedents":
+        send_message(chat_id, f"⏳ 正在檢索標的 `{target}` 同業歷史先例交易估值倍數 (Precedent Transactions)...")
+        send_chat_action(chat_id, "typing")
+        tdata = get_ticker_data(target)
+        prompt = build_precedents_prompt(tdata)
+        ans = llm.chat_complete(current_system_prompt, prompt)
+        send_message(chat_id, f"📜 *先例併購交易估值與控制權溢價*：\n───────────────────────\n{ans}", reply_markup=make_ticker_buttons(target))
+        return
+
+    # 20. 官方核心工作流：首次覆蓋深度研報 (Initiation Note)
+    elif action == "initiation":
+        send_message(chat_id, f"⏳ 正在調用【賣方股票研究首席】為 `{target}` 撰寫首次覆蓋深度研報 (Initiation Note)...")
+        send_chat_action(chat_id, "typing")
+        tdata = get_ticker_data(target)
+        prompt = build_initiation_prompt(tdata)
+        ans = llm.chat_complete(current_system_prompt, prompt)
+        send_message(chat_id, f"📰 *首次覆蓋深度研究報告 (Initiation Note)*：\n───────────────────────\n{ans}", reply_markup=make_ticker_buttons(target))
+        return
+
+    # 21. 官方核心工作流：早盤晨會快訊 (Morning Note)
+    elif action == "morning_note":
+        send_message(chat_id, f"⏳ 正在生成標的 `{target}` 早盤晨會操作快報 (Morning Flash)...")
+        send_chat_action(chat_id, "typing")
+        tdata = get_ticker_data(target)
+        prompt = build_morning_note_prompt(tdata)
+        ans = llm.chat_complete(current_system_prompt, prompt)
+        send_message(chat_id, f"⚡ *早盤晨會快報與交易指引*：\n───────────────────────\n{ans}", reply_markup=make_ticker_buttons(target))
+        return
+
+    # 22. 官方核心工作流：核心多空假說 (Bull / Bear Thesis)
+    elif action == "thesis":
+        send_message(chat_id, f"⏳ 正在構建標的 `{target}` 多空極致假說 (Bull vs. Bear Thesis)...")
+        send_chat_action(chat_id, "typing")
+        tdata = get_ticker_data(target)
+        prompt = build_thesis_prompt(tdata)
+        ans = llm.chat_complete(current_system_prompt, prompt)
+        send_message(chat_id, f"🐂 *核心多空對決假說與機率分佈*：\n───────────────────────\n{ans}", reply_markup=make_ticker_buttons(target))
+        return
+
+    # 23. 官方核心工作流：業績電話會高管質詢 (Call Prep)
+    elif action == "call_prep":
+        send_message(chat_id, f"⏳ 正在生成標的 `{target}` 財報電話會高管質詢題庫 (Call Prep Pack)...")
+        send_chat_action(chat_id, "typing")
+        tdata = get_ticker_data(target)
+        prompt = build_call_prep_prompt(tdata)
+        ans = llm.chat_complete(current_system_prompt, prompt)
+        send_message(chat_id, f"🎙️ *業績電話會高管質詢與追問題庫*：\n───────────────────────\n{ans}", reply_markup=make_ticker_buttons(target))
+        return
+
+    # 24. 官方核心工作流：投資委員會備忘錄 (IC Memo)
+    elif action == "ic_memo":
+        send_message(chat_id, f"⏳ 正在調用【私募股權基金合夥人】為 `{target}` 起草投委會 IC Memo...")
+        send_chat_action(chat_id, "typing")
+        tdata = get_ticker_data(target)
+        prompt = build_ic_memo_prompt(tdata)
+        ans = llm.chat_complete(current_system_prompt, prompt)
+        send_message(chat_id, f"📋 *私募股權投資委員會備忘錄 (IC Memo)*：\n───────────────────────\n{ans}", reply_markup=make_ticker_buttons(target))
+        return
+
+    # 25. 官方核心工作流：360° 盡職調查清單 (DD Checklist)
+    elif action == "dd_checklist":
+        send_message(chat_id, f"⏳ 正在為標的 `{target}` 生成全方位 360° 盡職調查清單 (DD Checklist)...")
+        send_chat_action(chat_id, "typing")
+        tdata = get_ticker_data(target)
+        prompt = build_dd_checklist_prompt(tdata)
+        ans = llm.chat_complete(current_system_prompt, prompt)
+        send_message(chat_id, f"🔍 *360° 全方位盡職調查清單 (DD Checklist)*：\n───────────────────────\n{ans}", reply_markup=make_ticker_buttons(target))
+        return
+
+    # 26. 官方核心工作流：單元經濟學拆解 (Unit Economics)
+    elif action == "unit_economics":
+        send_message(chat_id, f"⏳ 正在拆解標的 `{target}` 單元經濟效益 (Unit Economics)...")
+        send_chat_action(chat_id, "typing")
+        tdata = get_ticker_data(target)
+        prompt = build_unit_economics_prompt(tdata)
+        ans = llm.chat_complete(current_system_prompt, prompt)
+        send_message(chat_id, f"📊 *單元經濟效益 (CAC/LTV/留存) 模型*：\n───────────────────────\n{ans}", reply_markup=make_ticker_buttons(target))
+        return
+
+    # 27. 官方核心工作流：投後 100 天價值創造計畫 (Value Creation)
+    elif action == "value_creation":
+        send_message(chat_id, f"⏳ 正在制定標的 `{target}` 投後 100 天價值創造與增長賦能方案...")
+        send_chat_action(chat_id, "typing")
+        tdata = get_ticker_data(target)
+        prompt = build_value_creation_prompt(tdata)
+        ans = llm.chat_complete(current_system_prompt, prompt)
+        send_message(chat_id, f"🚀 *投後 100 天價值創造方案 (Value Creation)*：\n───────────────────────\n{ans}", reply_markup=make_ticker_buttons(target))
+        return
+
+    # 28. 官方核心工作流：高管會面準備簡報包 (Meeting Prep)
+    elif action == "meeting_prep":
+        send_message(chat_id, f"⏳ 正在調用【客戶會談與簡報專家】為會見【{target}】生成專屬簡報包 (Briefing Pack)...")
+        send_chat_action(chat_id, "typing")
+        prompt = build_meeting_prep_prompt(target)
+        ans = llm.chat_complete(current_system_prompt, prompt)
+        meet_nav = {
+            "inline_keyboard": [
+                [
+                    {"text": "⚡ 查該公司行情", "callback_data": f"pick:{extract_ticker(target) or 'NVDA'}"},
+                    {"text": "📑 生成投資備忘錄", "callback_data": f"act:ic_memo:{extract_ticker(target) or 'NVDA'}"}
+                ],
+                [
+                    {"text": "🎭 切換專家角色", "callback_data": "menu:role_picker"},
+                    {"text": "🏠 返回專屬首頁", "callback_data": "menu:home"}
+                ]
+            ]
+        }
+        send_message(chat_id, f"🤝 *客戶會面準備簡報包 (Meeting Briefing Pack)*：\n───────────────────────\n{ans}", reply_markup=meet_nav)
+        return
+
+    # 29. 官方核心工作流：總帳對帳與平帳異常排查 (GL Reconcile)
+    elif action == "gl_reconcile":
+        send_message(chat_id, f"⏳ 正在由【總帳對帳與平帳專家】排查【{target}】未平分錄與流水根因...")
+        send_chat_action(chat_id, "typing")
+        prompt = build_gl_reconcile_prompt(target)
+        ans = llm.chat_complete(current_system_prompt, prompt)
+        gl_nav = {
+            "inline_keyboard": [
+                [
+                    {"text": "📅 月末關帳清單", "callback_data": "act:month_end_close:月度關帳工作流與應計計提檢驗清單"},
+                    {"text": "⚖️ LP 收益審計", "callback_data": "act:statement_audit:私募基金收益分配瀑布流與門檻回報率審計"}
+                ],
+                [
+                    {"text": "🎭 切換專家角色", "callback_data": "menu:role_picker"},
+                    {"text": "🏠 返回專屬首頁", "callback_data": "menu:home"}
+                ]
+            ]
+        }
+        send_message(chat_id, f"📑 *會計總帳未平分錄與平帳調節報告*：\n───────────────────────\n{ans}", reply_markup=gl_nav)
+        return
+
+    # 30. 官方核心工作流：月末結帳與差異分析 (Month-End Close)
+    elif action == "month_end_close":
+        send_message(chat_id, f"⏳ 正在由【月末結帳與財務營運專家】生成【{target}】月末關帳與差異評論...")
+        send_chat_action(chat_id, "typing")
+        prompt = build_month_end_close_prompt(target)
+        ans = llm.chat_complete(current_system_prompt, prompt)
+        send_message(chat_id, f"📅 *月末關帳檢查清單與費用差異評論*：\n───────────────────────\n{ans}", reply_markup=make_home_buttons())
+        return
+
+    # 31. 官方核心工作流：LP 收益分配審計 (Statement Audit)
+    elif action == "statement_audit":
+        send_message(chat_id, f"⏳ 正在由【財務審計與 LP 核數專家】審計【{target}】分配瀑布與管理費...")
+        send_chat_action(chat_id, "typing")
+        prompt = build_statement_audit_prompt(target)
+        ans = llm.chat_complete(current_system_prompt, prompt)
+        send_message(chat_id, f"⚖️ *LP 收益分配瀑布流與管理費審計意見*：\n───────────────────────\n{ans}", reply_markup=make_home_buttons())
+        return
+
+    # 32. 官方核心工作流：穿透式 KYC/AML 審查 (KYC Screen)
+    elif action == "kyc_screen":
+        send_message(chat_id, f"⏳ 正在由【穿透式合規與 KYC 審查總監】對【{target}】執行實質受益人與制裁名單穿透審查...")
+        send_chat_action(chat_id, "typing")
+        prompt = build_kyc_screen_prompt(target)
+        ans = llm.chat_complete(current_system_prompt, prompt)
+        kyc_nav = {
+            "inline_keyboard": [
+                [
+                    {"text": "⚠️ 標的下行風險排查", "callback_data": "top:risks:合規與下行風險排查"},
+                    {"text": "🔍 360° 盡調清單", "callback_data": "act:dd_checklist:NVDA"}
+                ],
+                [
+                    {"text": "🎭 切換專家角色", "callback_data": "menu:role_picker"},
+                    {"text": "🏠 返回專屬首頁", "callback_data": "menu:home"}
+                ]
+            ]
+        }
+        send_message(chat_id, f"🛡️ *穿透式 KYC/AML 與合規盡職調查報告*：\n───────────────────────\n{ans}", reply_markup=kyc_nav)
+        return
+
+    # 33. 關於 FinBot (普通用戶專屬)
     elif action == "about":
         send_message(chat_id, get_about_panel_text(), reply_markup=make_home_buttons(effective_user))
         return
@@ -1494,6 +1828,75 @@ def handle_message(update: dict):
     # 全球貿易與跨國供應鏈
     if any(kw in text for kw in ["貿易", "關稅", "出海", "海運", "轉口", "近岸外包", "運價", "外貿", "貿易專家", "墨西哥工廠", "越南外包"]):
         execute_action(chat_id, "trade", text)
+        return
+
+    # 官方核心工作流自然語言直達
+    target_ticker = extract_ticker(text) or "NVDA"
+
+    # 1. 投行併購類工作流
+    if any(kw in text.lower() for kw in ["cim", "機密備忘錄", "機密信息備忘錄"]):
+        execute_action(chat_id, "cim", target_ticker)
+        return
+    if any(kw in text.lower() for kw in ["teaser", "盲測", "項目簡介", "匿名投資"]):
+        execute_action(chat_id, "teaser", target_ticker)
+        return
+    if any(kw in text.lower() for kw in ["買方清單", "buyer list", "收購方清單", "潛在買方"]):
+        execute_action(chat_id, "buyer_list", target_ticker)
+        return
+    if any(kw in text.lower() for kw in ["併購模型", "merger model", "增厚稀釋", "eps增厚"]):
+        execute_action(chat_id, "merger_model", f"MSFT_{target_ticker}")
+        return
+    if any(kw in text.lower() for kw in ["先例交易", "precedent", "先例併購", "控制權溢價"]):
+        execute_action(chat_id, "precedents", target_ticker)
+        return
+
+    # 2. 賣方研報類工作流
+    if any(kw in text.lower() for kw in ["首次覆蓋", "首次覆蓋研報", "initiation", "覆蓋報告"]):
+        execute_action(chat_id, "initiation", target_ticker)
+        return
+    if any(kw in text.lower() for kw in ["晨會", "早盤晨會", "早盤快訊", "morning note", "晨會快訊"]):
+        execute_action(chat_id, "morning_note", target_ticker)
+        return
+    if any(kw in text.lower() for kw in ["多空假說", "多空對決", "多空邏輯", "bull bear", "多頭空頭"]):
+        execute_action(chat_id, "thesis", target_ticker)
+        return
+    if any(kw in text.lower() for kw in ["質詢題庫", "高管質詢", "業績會", "電話會", "call prep", "問答清單"]):
+        execute_action(chat_id, "call_prep", target_ticker)
+        return
+
+    # 3. 私募股權與盡調類工作流
+    if any(kw in text.lower() for kw in ["ic memo", "投委會", "投資備忘錄", "投委會memo"]):
+        execute_action(chat_id, "ic_memo", target_ticker)
+        return
+    if any(kw in text.lower() for kw in ["盡調清單", "盡職調查", "dd checklist", "360盡調"]):
+        execute_action(chat_id, "dd_checklist", target_ticker)
+        return
+    if any(kw in text.lower() for kw in ["單元經濟", "unit economics", "單元效益", "cac", "ltv"]):
+        execute_action(chat_id, "unit_economics", target_ticker)
+        return
+    if any(kw in text.lower() for kw in ["價值創造", "投後", "100天", "value creation", "投後賦能"]):
+        execute_action(chat_id, "value_creation", target_ticker)
+        return
+
+    # 4. 會面簡報
+    if any(kw in text.lower() for kw in ["會面簡報", "客戶簡報", "meeting prep", "高管會談", "簡報包"]):
+        execute_action(chat_id, "meeting_prep", text)
+        return
+
+    # 5. 基金營運與會計
+    if any(kw in text.lower() for kw in ["總帳", "未平帳", "平帳", "對帳", "gl reconcile", "在途資金"]):
+        execute_action(chat_id, "gl_reconcile", text)
+        return
+    if any(kw in text.lower() for kw in ["月末關帳", "月末結帳", "關帳清單", "month end", "費用差異"]):
+        execute_action(chat_id, "month_end_close", text)
+        return
+    if any(kw in text.lower() for kw in ["分配瀑布", "lp審計", "核數", "statement audit", "管理費核查", "附帶權益"]):
+        execute_action(chat_id, "statement_audit", text)
+        return
+
+    # 6. 合規審查
+    if any(kw in text.lower() for kw in ["kyc", "aml", "反洗錢", "實質受益人", "ubo", "制裁名單"]):
+        execute_action(chat_id, "kyc_screen", text)
         return
 
     if text.lower() in ["/role", "role", "角色", "切換角色", "換角色"]:
