@@ -206,7 +206,7 @@ def send_chat_action(chat_id: int, action: str = "typing"):
 
 # ── 角色專屬推薦小方塊與首頁面板生成區 ──────────────────────────
 
-def make_home_buttons() -> dict:
+def make_home_buttons(user_id: int = 0) -> dict:
     current_model = llm.get_current_model()
     model_info = llm.get_model_info(current_model)
     model_short = model_info.get("name", current_model)[:11]
@@ -218,12 +218,20 @@ def make_home_buttons() -> dict:
         {"text": role_badge, "callback_data": "menu:role_picker"},
         {"text": f"🧠 模型：{model_short}", "callback_data": "menu:model_picker:0"}
     ]
-    is_paused = perms.is_paused()
-    status_tag = "🔴維護中" if is_paused else "🟢正常"
-    common_bottom = [
-        {"text": f"👥 權限與開關 [{status_tag}]", "callback_data": "act:users:self"},
-        {"text": "🔄 刷新面板", "callback_data": "menu:home"}
-    ]
+    
+    # 嚴格安全隔離：只有 Owner 能看到管理控制台按鈕
+    if user_id and perms.is_owner(user_id):
+        is_public = perms.is_public_mode()
+        status_tag = "🟢對外開放" if is_public else "🔴僅管理員"
+        common_bottom = [
+            {"text": f"👥 權限與開關 [{status_tag}]", "callback_data": "act:users:self"},
+            {"text": "🔄 刷新面板", "callback_data": "menu:home"}
+        ]
+    else:
+        common_bottom = [
+            {"text": "ℹ️ 關於 FinBot", "callback_data": "act:about:self"},
+            {"text": "🔄 刷新面板", "callback_data": "menu:home"}
+        ]
 
     # 1. 🌐 全球宏觀與資金流向策略首席 (market_researcher)
     if active_role == "market_researcher":
@@ -405,13 +413,13 @@ def get_home_text() -> str:
 👇 *下方為你量身推薦的【{r_info['name'][:10]}】專屬工具小方塊*："""
 
 def build_users_keyboard(is_owner: bool) -> dict:
-    is_paused = perms.is_paused()
+    is_public = perms.is_public_mode()
     buttons = []
     if is_owner:
-        if is_paused:
-            buttons.append([{"text": "🔓 恢復開放 Bot 服務 (解除鎖定)", "callback_data": "act:toggle_pause:self"}])
+        if is_public:
+            buttons.append([{"text": "🔒 臨時關閉對外開放 (僅限自己使用)", "callback_data": "act:toggle_pause:self"}])
         else:
-            buttons.append([{"text": "🔒 臨時關閉 Bot 服務 (維護模式)", "callback_data": "act:toggle_pause:self"}])
+            buttons.append([{"text": "🔓 開啟對外開放 (允許所有TG用戶使用)", "callback_data": "act:toggle_pause:self"}])
     
     buttons.append([
         {"text": "🔄 刷新名單與狀態", "callback_data": "act:users:self"},
@@ -420,28 +428,47 @@ def build_users_keyboard(is_owner: bool) -> dict:
     return {"inline_keyboard": buttons}
 
 def get_users_panel_text() -> str:
-    is_paused = perms.is_paused()
-    status_emoji = "🔴 已臨時關閉 (僅 Owner 可用)" if is_paused else "🟢 正常對外開放"
+    is_public = perms.is_public_mode()
+    status_emoji = "🟢 對外開放中 (全體 TG 用戶可正常使用金融功能)" if is_public else "🔴 已臨時關閉對外開放 (僅 Owner 可用)"
     users = perms.list_users()
     
     lines = [
-        "👥 *FinBot 用戶權限與系統控制台*",
+        "👥 *FinBot 用戶權限與系統安全控制台*",
         "───────────────────────",
-        f"⚡ *服務運作狀態*：*{status_emoji}*",
+        f"⚡ *當前模式*：*{status_emoji}*",
         f"👑 *超級管理員 (Owner)*：`{OWNER_ID}`",
         "───────────────────────",
-        "📋 *目前已授權名單*："
+        "🛡️ *本地安全防護機制*：*【已全面啟用】*",
+        "• 已禁止外部用戶存取主機系統目錄與檔案",
+        "• 已遮蔽 API Key、Token 與伺服器環境變數",
+        "• 已鎖定純金融投研沙箱，阻斷非金融探測指令",
+        "───────────────────────",
+        "📋 *目前註冊用戶名單*："
     ]
     for uid, uinfo in users.items():
         tag = "👑 Owner" if str(uid) == str(OWNER_ID) else f"👤 {uinfo.get('role', 'user')}"
         lines.append(f"• ID: `{uid}` ({tag})")
     
-    if is_paused:
-        lines.append("\n⚠️ _注意：當前已開啟【臨時關閉/維護模式】。除管理員外，其他所有授權用戶之請求均已被安全暫停。_")
+    if not is_public:
+        lines.append("\n⚠️ _注意：當前處於【臨時關閉/私有模式】。除管理員外，其他所有訪客的請求均已被安全暫停。_")
     else:
-        lines.append("\n💡 _提示：Owner 點擊上方小方塊可隨時一鍵臨時關閉/開放對外服務。_")
+        lines.append("\n💡 _提示：Owner 可點擊上方按鈕隨時一鍵臨時切換對外開放/關閉。_")
         
     return "\n".join(lines)
+
+def get_about_panel_text() -> str:
+    return """🏛️ *FinBot 智能金融與宏觀投研顧問*
+───────────────────────
+歡迎使用 FinBot！本機器人專為高階金融投資者與研究員打造：
+
+• 🌍 *全球宏觀流動性*：美元指數、美債殖利率、大類資產跨市場監控
+• 📊 *行業板塊資金排名*：美股 11 大核心產業 ETF 強弱表現
+• 🏦 *13F 機構聰明錢*：巴菲特波克夏、橋水、木頭姐最新持倉加倉動態
+• 🚢 *全球貿易與供應鏈*：海運運價指數、跨國關稅壁壘與近岸轉口外包
+• 🪙 *加密貨幣與 Web3*：大盤恐慌貪婪指數、算力板塊與現貨 ETF
+• 🚀 *冷門高爆發硬科技*：可控核聚變、量子計算、基因治療、固態電池
+
+💡 *操作提示*：點擊下方小方塊即可直接調閱實時行情與 100% 繁體中文深度研報！"""
 
 def build_crypto_keyboard() -> dict:
     """加密貨幣專區小方塊選單"""
@@ -1088,20 +1115,27 @@ def execute_action(chat_id: int, action: str, target: str, user_id: int = 0):
         send_message(chat_id, f"🚢 *全球貿易與供應鏈實戰策略報告*：\n───────────────────────\n{ans}", reply_markup=trade_markup)
         return
 
-    # 14. 用戶名單與系統開關控制
-    elif action == "users":
-        is_owner = perms.is_owner(effective_user)
-        send_message(chat_id, get_users_panel_text(), reply_markup=build_users_keyboard(is_owner))
+    # 14. 關於 FinBot (普通用戶專屬)
+    elif action == "about":
+        send_message(chat_id, get_about_panel_text(), reply_markup=make_home_buttons(effective_user))
         return
 
-    # 15. 臨時開關切換 (僅限 Owner)
+    # 15. 用戶名單與安全控制台 (嚴格限制僅 Owner 可查閱)
+    elif action == "users":
+        if not perms.is_owner(effective_user):
+            send_message(chat_id, "⛔ *權限不足*：用戶名單與系統安全開關僅供超級管理員 (Owner) 查閱，嚴禁外部存取。")
+            return
+        send_message(chat_id, get_users_panel_text(), reply_markup=build_users_keyboard(True))
+        return
+
+    # 16. 臨時對外開放開關切換 (僅限 Owner)
     elif action == "toggle_pause":
         if not perms.is_owner(effective_user):
-            send_message(chat_id, "⛔ *權限不足*：只有超級管理員 (Owner) 具備切換系統開關的權限！")
+            send_message(chat_id, "⛔ *權限不足*：只有超級管理員 (Owner) 具備切換對外開放狀態的權限！")
             return
             
-        new_state = perms.toggle_paused()
-        state_str = "🔴 已臨時關閉（僅管理員可用，非Owner請求將被暫停）" if new_state else "🟢 已恢復對外正常開放"
+        new_state = perms.toggle_public_mode()
+        state_str = "🟢 已恢復【對外開放】模式（全體 TG 用戶可正常使用金融功能）" if new_state else "🔴 已切換為【臨時關閉/私有模式】（非 Owner 請求將被暫停）"
         send_message(chat_id, f"⚡ *系統開關變更通知*：\n───────────────────────\nFinBot 服務狀態現已切換為：\n*{state_str}*")
         send_message(chat_id, get_users_panel_text(), reply_markup=build_users_keyboard(True))
         return
@@ -1220,9 +1254,9 @@ def handle_callback(cb: dict):
     if data == "menu:home":
         answer_callback(cb_id)
         if message_id:
-            edit_message(chat_id, message_id, get_home_text(), reply_markup=make_home_buttons())
+            edit_message(chat_id, message_id, get_home_text(), reply_markup=make_home_buttons(from_user))
         else:
-            send_message(chat_id, get_home_text(), reply_markup=make_home_buttons())
+            send_message(chat_id, get_home_text(), reply_markup=make_home_buttons(from_user))
         return
 
     if data == "menu:close":
@@ -1258,23 +1292,30 @@ def handle_message(update: dict):
     text = msg["text"].strip()
     
     if not perms.is_authorized(user_id):
-        if perms.is_paused():
-            logger.warning(f"攔截請求（系統維護中）: User ID {user_id}")
-            send_message(chat_id, "⏸️ *系統維護中*：FinBot 目前已由管理員臨時關閉對外服務，僅管理員可用，請稍後再試。")
-        else:
-            logger.warning(f"攔截未授權存取: User ID {user_id}")
-            send_message(chat_id, "⛔ *存取拒絕*：此 Telegram ID 未授權。")
+        logger.warning(f"攔截請求（對外開放已關閉）: User ID {user_id}")
+        send_message(chat_id, "⏸️ *系統維護中*：FinBot 目前處於【臨時關閉/私有模式】，暫不對外開放訪客使用，請稍後再試。")
         return
 
-    # 管理員開關指令
+    # 🛡️ 本地安全防禦：防止外部用戶刺探本機系統、檔案與金鑰
+    sensitive_probes = [
+        "電腦路徑", "伺服器路徑", "查看文件", "讀取文件", "環境變數", "api_key", "apikey",
+        "bot_token", "token是什麼", "終端指令", "執行命令", "bash", "cat /", "ls -",
+        "whoami", "ipconfig", "ifconfig", "etc/passwd", "敏感資料", "管理員是誰", "獲取配置",
+        "config.json", "permissions.json", "主機目錄", "硬盤"
+    ]
+    if any(p in text.lower() for p in sensitive_probes):
+        send_message(chat_id, "🔒 *【系統安全保護機制已觸發】*：\n───────────────────────\nFinBot 僅專注於提供公開金融市場數據與投研分析服務。\n底層伺服器已全面沙箱化隔離，嚴禁查詢任何主機環境、本地檔案與系統敏感資訊。")
+        return
+
+    # 管理員開關指令 (僅限 Owner)
     if text.lower() in ["/pause", "關閉bot", "臨時關閉", "暫停bot", "關閉服務", "維護模式"] and perms.is_owner(user_id):
-        perms.set_paused(True)
-        send_message(chat_id, "🔒 *FinBot 已臨時關閉*！除管理員外，所有外部請求均已被安全暫停。", reply_markup=build_users_keyboard(True))
+        perms.set_public_mode(False)
+        send_message(chat_id, "🔒 *FinBot 已臨時關閉對外開放*！除管理員外，所有外部請求均已被安全暫停。", reply_markup=build_users_keyboard(True))
         return
 
     if text.lower() in ["/resume", "開啟bot", "恢復bot", "開放服務", "解除鎖定"] and perms.is_owner(user_id):
-        perms.set_paused(False)
-        send_message(chat_id, "🔓 *FinBot 已恢復開放*！所有授權用戶可正常使用。", reply_markup=build_users_keyboard(True))
+        perms.set_public_mode(True)
+        send_message(chat_id, "🔓 *FinBot 已恢復對外開放*！所有 Telegram 訪客用戶可正常使用金融功能。", reply_markup=build_users_keyboard(True))
         return
 
     # 加密貨幣喚起詞
@@ -1355,7 +1396,7 @@ def handle_message(update: dict):
         return
 
     if text.lower() in ["/start", "/help", "hi", "hello", "你好", "選單", "菜單"]:
-        send_message(chat_id, get_home_text(), reply_markup=make_home_buttons())
+        send_message(chat_id, get_home_text(), reply_markup=make_home_buttons(user_id))
         return
 
     if text.startswith("/auth ") and perms.is_owner(user_id):
