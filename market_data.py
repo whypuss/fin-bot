@@ -418,4 +418,98 @@ def get_fund_flows_data(topic_id: str) -> dict:
     except Exception as e:
         return {"success": False, "error": str(e)}
 
+GLOBAL_SNAPSHOT_CONFIG = [
+    # 類別, 代碼, 顯示名(4全角字寬)
+    ("指數", "^GSPC", "標普500 "),
+    ("指數", "^IXIC", "納斯達克"),
+    ("指數", "^DJI", "道瓊工業"),
+    ("指數", "^HSI", "恆生指數"),
+    ("指數", "^TWII", "台灣加權"),
+    ("指數", "^N225", "日經225 "),
+    ("指數", "^STOXX50E", "歐洲泛歐"),
+    ("加密", "BTC-USD", "比特幣  "),
+    ("加密", "ETH-USD", "以太坊  "),
+    ("金銀", "GC=F", "紐約黃金"),
+    ("金銀", "SI=F", "紐約白銀"),
+]
+
+def get_global_markets_snapshot() -> dict:
+    """抓取全球重要股票指數、比特幣、黃金白銀價格並生成完美直屏真表格"""
+    try:
+        symbols = [item[1] for item in GLOBAL_SNAPSHOT_CONFIG]
+        df = yf.download(symbols, period="5d", progress=False)["Close"]
+        
+        parsed_items = []
+        for cat, sym, name in GLOBAL_SNAPSHOT_CONFIG:
+            try:
+                series = df[sym].dropna()
+                if len(series) >= 2:
+                    curr = series.iloc[-1]
+                    prev = series.iloc[-2]
+                    chg_pct = ((curr - prev) / prev) * 100
+                elif len(series) == 1:
+                    curr = series.iloc[-1]
+                    chg_pct = 0.0
+                else:
+                    curr = 0.0
+                    chg_pct = 0.0
+                
+                parsed_items.append({
+                    "category": cat,
+                    "symbol": sym,
+                    "name": name,
+                    "price": float(curr),
+                    "change_pct": float(chg_pct)
+                })
+            except Exception:
+                parsed_items.append({
+                    "category": cat,
+                    "symbol": sym,
+                    "name": name,
+                    "price": 0.0,
+                    "change_pct": 0.0
+                })
+                
+        # 構建專用直屏真表格 (寬度嚴格限制在 27 字符以內)
+        lines = [
+            "```text",
+            "┌────────┬────────┬───────┐",
+            "│  資產  │  最新  │  24H  │",
+            "├────────┼────────┼───────┤"
+        ]
+        
+        last_cat = None
+        for it in parsed_items:
+            # 分組分隔線
+            if last_cat is not None and it["category"] != last_cat:
+                lines.append("├────────┼────────┼───────┤")
+            last_cat = it["category"]
+            
+            p_val = it["price"]
+            if p_val >= 1000:
+                p_str = f"{p_val:8.1f}"
+            else:
+                p_str = f"{p_val:8.2f}"
+                
+            chg = it["change_pct"]
+            sign = "+" if chg > 0 else "-" if chg < 0 else " "
+            c_str = f"{sign}{abs(chg):.2f}%"
+            
+            lines.append(f"│{it['name']}│{p_str}│{c_str:>7}│")
+            
+        lines.append("└────────┴────────┴───────┘")
+        lines.append("```")
+        
+        table_text = "\n".join(lines)
+        return {
+            "success": True,
+            "data": parsed_items,
+            "table_text": table_text
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
 

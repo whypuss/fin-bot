@@ -16,7 +16,8 @@ from market_data import (
     FRONTIER_SECTORS,
     CRYPTO_SECTORS,
     INSTITUTIONAL_FUNDS,
-    get_fund_flows_data
+    get_fund_flows_data,
+    get_global_markets_snapshot
 )
 from fsi_prompts import (
     FINANCIAL_ROLES,
@@ -654,7 +655,8 @@ def make_home_buttons(user_id: int = 0) -> dict:
             common_bottom
         ]
 
-    return {"inline_keyboard": buttons}
+    top_row = [{"text": "🌐 全球重要指數 · 比特幣 · 金銀看板", "callback_data": "act:macro_snapshot:all"}]
+    return {"inline_keyboard": [top_row] + buttons}
 
 def get_home_text() -> str:
     r_info = next((r for r in FINANCIAL_ROLES if r["id"] == active_role), FINANCIAL_ROLES[0])
@@ -990,6 +992,64 @@ def execute_action(chat_id: int, action: str, target: str, user_id: int = 0):
     send_chat_action(chat_id, "typing")
     current_system_prompt = get_role_prompt(active_role)
     
+    # 0. 🌐 全球核心股票指數、比特幣、金銀價格快報
+    if action == "macro_snapshot":
+        send_message(chat_id, "⏳ 正在抓取全球核心股票指數、比特幣及貴金屬金銀最新報價...")
+        send_chat_action(chat_id, "typing")
+        snap = get_global_markets_snapshot()
+        if not snap.get("success"):
+            send_message(chat_id, f"❌ 抓取全球市場快報數據失敗: {snap.get('error')}")
+            return
+            
+        tbl = snap.get("table_text", "")
+        data_list = snap.get("data", [])
+        indices = [it for it in data_list if it["category"] == "指數"]
+        crypto = [it for it in data_list if it["category"] == "加密"]
+        metals = [it for it in data_list if it["category"] == "金銀"]
+        
+        idx_up = sum(1 for it in indices if it["change_pct"] > 0)
+        idx_down = len(indices) - idx_up
+        
+        summary_lines = [
+            "🌐 *全球核心股票指數 · 比特幣 · 金銀價格快報*",
+            "───────────────────────",
+            tbl,
+            "───────────────────────",
+            "📊 *大類資產跨市場信號簡評*：",
+            f"• 📈 *全球股指*：{len(indices)}大核心指數中 {idx_up} 漲 {idx_down} 跌，全球權益資產動能 {'偏強' if idx_up >= idx_down else '震盪受壓'}。"
+        ]
+        
+        btc_item = next((it for it in crypto if "BTC" in it.get("symbol", "")), None)
+        if btc_item:
+            btc_sign = "+" if btc_item["change_pct"] > 0 else ""
+            summary_lines.append(f"• 🪙 *比特幣*：最新 `${btc_item['price']:,.1f}` ({btc_sign}{btc_item['change_pct']}%)，流動性偏好穩健。")
+            
+        gold_item = next((it for it in metals if "GC=F" in it.get("symbol", "")), None)
+        if gold_item:
+            gold_sign = "+" if gold_item["change_pct"] > 0 else ""
+            summary_lines.append(f"• 🥇 *紐約黃金*：最新 `${gold_item['price']:,.1f}` ({gold_sign}{gold_item['change_pct']}%)，避險與抗通膨買盤支撐。")
+            
+        summary_lines.append("\n💡 _點選下方小方塊可進一步穿透板塊排名、資金流向與加密專區_：")
+        
+        macro_nav = {
+            "inline_keyboard": [
+                [
+                    {"text": "🌍 全球資金流向看板", "callback_data": "act:global_flows:market"},
+                    {"text": "📊 11大行業資金排名", "callback_data": "act:sector_ranking:market"}
+                ],
+                [
+                    {"text": "🪙 加密貨幣專區看板", "callback_data": "menu:crypto_picker"},
+                    {"text": "🏦 頂級基金加倉動態", "callback_data": "menu:fund_flows_picker"}
+                ],
+                [
+                    {"text": "🎭 切換專家角色", "callback_data": "menu:role_picker"},
+                    {"text": "🏠 返回專屬首頁", "callback_data": "menu:home"}
+                ]
+            ]
+        }
+        send_message(chat_id, "\n".join(summary_lines), reply_markup=macro_nav)
+        return
+
     # 1. 加密大盤與恐慌指數
     if action == "crypto_overview":
         send_message(chat_id, "⏳ 正在抓取加密貨幣恐慌與貪婪指數 (Fear & Greed) 及主流幣實時報價...")
@@ -1835,6 +1895,11 @@ def handle_message(update: dict):
     if text.lower() in ["/resume", "開啟bot", "恢復bot", "開放服務", "解除鎖定"] and perms.is_owner(user_id):
         perms.set_public_mode(True)
         send_message(chat_id, "🔓 *FinBot 已恢復對外開放*！所有 Telegram 訪客用戶可正常使用金融功能。", reply_markup=build_users_keyboard(True))
+        return
+
+    # 全球核心股票指數、比特幣、金銀快報喚起
+    if any(kw in text.lower() for kw in ["全球指數", "全球股指", "重要指數", "主要指數", "金銀價格", "黃金白銀", "比特幣金銀", "大盤表格", "全球市場快報", "大盤概覽", "全球行情"]):
+        execute_action(chat_id, "macro_snapshot", "all")
         return
 
     # 加密貨幣喚起詞
