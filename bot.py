@@ -136,13 +136,20 @@ def extract_ticker(text: str) -> str:
 
 def format_telegram_tables(text: str) -> str:
     """
-    手機直屏專用自適應排版引擎：
-    將易在手機直屏嚴重擠壓、折行錯位的表格，自動轉換為 100% 垂直對齊、清爽易讀的【手機直屏結構化卡片流】
+    手機直屏專用表格自適應排版引擎：
+    嚴格遵循手機直屏 26-28 字符極限寬度，將表格轉化為橫平豎直、絕不折行的直屏緊湊窄表格！
+    若欄位過多（大於3欄），自動智慧拆分為多張直屏窄表，確保對齊完美、美觀大方。
     """
-    if "|" not in text and "┌" not in text:
+    if "|" not in text:
         return text
 
-    def flush_table_to_cards(tbl_lines):
+    def dlen(s: str) -> int:
+        cnt = 0
+        for ch in str(s):
+            cnt += 2 if ord(ch) > 127 else 1
+        return cnt
+
+    def flush_table_to_portrait(tbl_lines):
         if not tbl_lines:
             return []
         rows = []
@@ -151,7 +158,6 @@ def format_telegram_tables(text: str) -> str:
             if stripped.startswith("|") and stripped.endswith("|"):
                 stripped = stripped[1:-1]
             cells = [c.strip() for c in stripped.split("|")]
-            # 過濾純分隔線
             if all(re.match(r"^:?-+:?$", c) for c in cells if c):
                 continue
             rows.append(cells)
@@ -160,71 +166,53 @@ def format_telegram_tables(text: str) -> str:
             return tbl_lines
 
         headers = rows[0]
-        data_rows = rows[1:]
+        data = rows[1:]
 
-        # 情況 A：兩欄式鍵值表單 (如 財務指標 | 數值)
-        if len(headers) == 2:
-            items = []
-            for r in data_rows:
-                if len(r) >= 2 and (r[0] or r[1]):
-                    items.append(f"• *{r[0]}*：`{r[1]}`")
-                elif len(r) == 1 and r[0]:
-                    items.append(f"• *{r[0]}*")
-            return ["\n" + "\n".join(items) + "\n"]
+        # 若欄位 > 3 欄，拆成多張 2-3 欄的直屏窄表
+        tables_to_render = []
+        if len(headers) <= 3:
+            tables_to_render.append((headers, data))
+        else:
+            # 表 1: 第 1 欄 (代號/名稱) + 第 2, 3 欄
+            h1 = [headers[0], headers[1], headers[2]]
+            d1 = [[r[0], r[1] if len(r)>1 else "", r[2] if len(r)>2 else ""] for r in data]
+            tables_to_render.append((h1, d1))
+            
+            # 表 2: 第 1 欄 + 後續欄位
+            rem_h = [headers[0]] + headers[3:min(len(headers), 5)]
+            d2 = [[r[0]] + [r[idx] if len(r)>idx else "" for idx in range(3, min(len(headers), 5))] for r in data]
+            tables_to_render.append((rem_h, d2))
 
-        # 情況 B：多欄同業/數據對比卡片
-        cards = []
-        for row_idx, r in enumerate(data_rows):
-            if not any(r):
-                continue
-            first_col = r[0] if len(r) > 0 else f"項目 {row_idx+1}"
-            second_col = r[1] if len(r) > 1 and len(headers) > 2 else ""
+        rendered_blocks = []
+        for h, rows_set in tables_to_render:
+            col_w = [dlen(col) for col in h]
+            for r in rows_set:
+                for idx, c in enumerate(r):
+                    if idx < len(col_w):
+                        col_w[idx] = max(col_w[idx], dlen(c))
+            
+            # 限制單欄最大寬度，確保直屏總寬度不超過 26 字符
+            col_w = [min(w, 14) for w in col_w]
+            
+            top = "┌" + "┬".join("─" * (w + 1) for w in col_w) + "┐"
+            mid = "├" + "┼".join("─" * (w + 1) for w in col_w) + "┤"
+            bot = "└" + "┴".join("─" * (w + 1) for w in col_w) + "┘"
+            
+            out = ["```text", top]
+            # 表頭
+            h_line = "│" + "│".join(h[i] + " " * max(col_w[i] + 1 - dlen(h[i]), 0) for i in range(len(h))) + "│"
+            out.append(h_line)
+            out.append(mid)
+            # 數據列
+            for r in rows_set:
+                r_line = "│" + "│".join(str(r[i]) + " " * max(col_w[i] + 1 - dlen(str(r[i])), 0) for i in range(len(h))) + "│"
+                out.append(r_line)
+            out.append(bot)
+            out.append("```")
+            rendered_blocks.append("\n".join(out))
 
-            if second_col and len(first_col) < 12 and not any(ch.isdigit() for ch in second_col):
-                title = f"🏷️ *{first_col}* ({second_col})"
-                start_idx = 2
-            else:
-                title = f"🏷️ *{first_col}*"
-                start_idx = 1
+        return ["\n" + "\n\n".join(rendered_blocks) + "\n"]
 
-            card_lines = [title]
-            items = []
-            for idx in range(start_idx, len(r)):
-                val = r[idx]
-                if not val:
-                    continue
-                h_name = headers[idx] if idx < len(headers) else f"指標{idx}"
-                items.append(f"{h_name}: `{val}`")
-
-            # 兩兩一組，手機直屏絕對不超寬折行
-            for i in range(0, len(items), 2):
-                chunk = items[i:i+2]
-                card_lines.append("  • " + " ｜ ".join(chunk))
-
-            cards.append("\n".join(card_lines))
-
-        return ["\n" + "\n\n".join(cards) + "\n"]
-
-    def _parse_boxed_table_to_cards(block_str):
-        raw_lines = [l.strip() for l in block_str.split("\n") if l.strip() and not l.strip().startswith("```")]
-        content_lines = []
-        for l in raw_lines:
-            if any(edge in l for edge in ["┌", "├", "└", "┬", "┼", "┴"]):
-                continue
-            if l.startswith("│") and l.endswith("│"):
-                cells = [c.strip() for c in l[1:-1].split("│")]
-                content_lines.append("| " + " | ".join(cells) + " |")
-        if len(content_lines) >= 2:
-            sep = "| " + " | ".join(["---"] * len(content_lines[0].split("|")[1:-1])) + " |"
-            test_tbl = [content_lines[0], sep] + content_lines[1:]
-            res = flush_table_to_cards(test_tbl)
-            return "\n".join(res)
-        return block_str
-
-    # 1. 處理已存在的代碼框線表格，轉化為直屏卡片
-    text = re.sub(r"```(?:text)?\s*[\n\r]+[┌├└│─┼┬┴\s\S]+?```", lambda m: _parse_boxed_table_to_cards(m.group(0)), text)
-
-    # 2. 處理原生 markdown 表格
     lines = text.split("\n")
     new_lines = []
     table_buffer = []
@@ -235,7 +223,7 @@ def format_telegram_tables(text: str) -> str:
         if stripped.startswith("```"):
             in_codeblock = not in_codeblock
             if table_buffer:
-                new_lines.extend(flush_table_to_cards(table_buffer))
+                new_lines.extend(flush_table_to_portrait(table_buffer))
                 table_buffer = []
             new_lines.append(line)
             continue
@@ -244,12 +232,12 @@ def format_telegram_tables(text: str) -> str:
             table_buffer.append(line)
         else:
             if table_buffer:
-                new_lines.extend(flush_table_to_cards(table_buffer))
+                new_lines.extend(flush_table_to_portrait(table_buffer))
                 table_buffer = []
             new_lines.append(line)
 
     if table_buffer:
-        new_lines.extend(flush_table_to_cards(table_buffer))
+        new_lines.extend(flush_table_to_portrait(table_buffer))
 
     return "\n".join(new_lines)
 
