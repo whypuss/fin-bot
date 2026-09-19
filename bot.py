@@ -218,8 +218,10 @@ def make_home_buttons() -> dict:
         {"text": role_badge, "callback_data": "menu:role_picker"},
         {"text": f"🧠 模型：{model_short}", "callback_data": "menu:model_picker:0"}
     ]
+    is_paused = perms.is_paused()
+    status_tag = "🔴維護中" if is_paused else "🟢正常"
     common_bottom = [
-        {"text": "👥 授權用戶", "callback_data": "act:users:self"},
+        {"text": f"👥 權限與開關 [{status_tag}]", "callback_data": "act:users:self"},
         {"text": "🔄 刷新面板", "callback_data": "menu:home"}
     ]
 
@@ -401,6 +403,45 @@ def get_home_text() -> str:
 🎯 *專屬視角*：_{r_info['desc']}_
 
 👇 *下方為你量身推薦的【{r_info['name'][:10]}】專屬工具小方塊*："""
+
+def build_users_keyboard(is_owner: bool) -> dict:
+    is_paused = perms.is_paused()
+    buttons = []
+    if is_owner:
+        if is_paused:
+            buttons.append([{"text": "🔓 恢復開放 Bot 服務 (解除鎖定)", "callback_data": "act:toggle_pause:self"}])
+        else:
+            buttons.append([{"text": "🔒 臨時關閉 Bot 服務 (維護模式)", "callback_data": "act:toggle_pause:self"}])
+    
+    buttons.append([
+        {"text": "🔄 刷新名單與狀態", "callback_data": "act:users:self"},
+        {"text": "🏠 返回專屬首頁", "callback_data": "menu:home"}
+    ])
+    return {"inline_keyboard": buttons}
+
+def get_users_panel_text() -> str:
+    is_paused = perms.is_paused()
+    status_emoji = "🔴 已臨時關閉 (僅 Owner 可用)" if is_paused else "🟢 正常對外開放"
+    users = perms.list_users()
+    
+    lines = [
+        "👥 *FinBot 用戶權限與系統控制台*",
+        "───────────────────────",
+        f"⚡ *服務運作狀態*：*{status_emoji}*",
+        f"👑 *超級管理員 (Owner)*：`{OWNER_ID}`",
+        "───────────────────────",
+        "📋 *目前已授權名單*："
+    ]
+    for uid, uinfo in users.items():
+        tag = "👑 Owner" if str(uid) == str(OWNER_ID) else f"👤 {uinfo.get('role', 'user')}"
+        lines.append(f"• ID: `{uid}` ({tag})")
+    
+    if is_paused:
+        lines.append("\n⚠️ _注意：當前已開啟【臨時關閉/維護模式】。除管理員外，其他所有授權用戶之請求均已被安全暫停。_")
+    else:
+        lines.append("\n💡 _提示：Owner 點擊上方小方塊可隨時一鍵臨時關閉/開放對外服務。_")
+        
+    return "\n".join(lines)
 
 def build_crypto_keyboard() -> dict:
     """加密貨幣專區小方塊選單"""
@@ -650,7 +691,8 @@ def format_quote_card(data: dict) -> str:
 • 賣方評級：*{data.get('recommendation')}*
 """
 
-def execute_action(chat_id: int, action: str, target: str):
+def execute_action(chat_id: int, action: str, target: str, user_id: int = 0):
+    effective_user = user_id if user_id != 0 else chat_id
     send_chat_action(chat_id, "typing")
     current_system_prompt = get_role_prompt(active_role)
     
@@ -1046,13 +1088,22 @@ def execute_action(chat_id: int, action: str, target: str):
         send_message(chat_id, f"🚢 *全球貿易與供應鏈實戰策略報告*：\n───────────────────────\n{ans}", reply_markup=trade_markup)
         return
 
-    # 14. 用戶名單
+    # 14. 用戶名單與系統開關控制
     elif action == "users":
-        users = perms.list_users()
-        lines = ["👥 *目前已授權名單*："]
-        for uid, uinfo in users.items():
-            lines.append(f"• ID: `{uid}` | 角色: *{uinfo.get('role')}*")
-        send_message(chat_id, "\n".join(lines), reply_markup=make_home_buttons())
+        is_owner = perms.is_owner(effective_user)
+        send_message(chat_id, get_users_panel_text(), reply_markup=build_users_keyboard(is_owner))
+        return
+
+    # 15. 臨時開關切換 (僅限 Owner)
+    elif action == "toggle_pause":
+        if not perms.is_owner(effective_user):
+            send_message(chat_id, "⛔ *權限不足*：只有超級管理員 (Owner) 具備切換系統開關的權限！")
+            return
+            
+        new_state = perms.toggle_paused()
+        state_str = "🔴 已臨時關閉（僅管理員可用，非Owner請求將被暫停）" if new_state else "🟢 已恢復對外正常開放"
+        send_message(chat_id, f"⚡ *系統開關變更通知*：\n───────────────────────\nFinBot 服務狀態現已切換為：\n*{state_str}*")
+        send_message(chat_id, get_users_panel_text(), reply_markup=build_users_keyboard(True))
         return
 
 def handle_callback(cb: dict):
@@ -1065,7 +1116,10 @@ def handle_callback(cb: dict):
     message_id = msg.get("message_id")
     
     if not perms.is_authorized(from_user):
-        answer_callback(cb_id, "⛔ 未授權的使用者", show_alert=True)
+        if perms.is_paused():
+            answer_callback(cb_id, "⏸️ 系統維護中：FinBot 目前已由管理員臨時關閉服務，僅管理員可用。", show_alert=True)
+        else:
+            answer_callback(cb_id, "⛔ 未授權的使用者", show_alert=True)
         return
     
     if data == "noop":
@@ -1186,12 +1240,12 @@ def handle_callback(cb: dict):
         
     if data.startswith("act:"):
         _, action, target = data.split(":", 2)
-        execute_action(chat_id, action, target)
+        execute_action(chat_id, action, target, user_id=from_user)
         return
         
     if data.startswith("top:"):
         _, action, target = data.split(":", 2)
-        execute_action(chat_id, action, target)
+        execute_action(chat_id, action, target, user_id=from_user)
         return
 
 def handle_message(update: dict):
@@ -1204,8 +1258,23 @@ def handle_message(update: dict):
     text = msg["text"].strip()
     
     if not perms.is_authorized(user_id):
-        logger.warning(f"攔截未授權存取: User ID {user_id}")
-        send_message(chat_id, "⛔ *存取拒絕*：此 Telegram ID 未授權。")
+        if perms.is_paused():
+            logger.warning(f"攔截請求（系統維護中）: User ID {user_id}")
+            send_message(chat_id, "⏸️ *系統維護中*：FinBot 目前已由管理員臨時關閉對外服務，僅管理員可用，請稍後再試。")
+        else:
+            logger.warning(f"攔截未授權存取: User ID {user_id}")
+            send_message(chat_id, "⛔ *存取拒絕*：此 Telegram ID 未授權。")
+        return
+
+    # 管理員開關指令
+    if text.lower() in ["/pause", "關閉bot", "臨時關閉", "暫停bot", "關閉服務", "維護模式"] and perms.is_owner(user_id):
+        perms.set_paused(True)
+        send_message(chat_id, "🔒 *FinBot 已臨時關閉*！除管理員外，所有外部請求均已被安全暫停。", reply_markup=build_users_keyboard(True))
+        return
+
+    if text.lower() in ["/resume", "開啟bot", "恢復bot", "開放服務", "解除鎖定"] and perms.is_owner(user_id):
+        perms.set_paused(False)
+        send_message(chat_id, "🔓 *FinBot 已恢復開放*！所有授權用戶可正常使用。", reply_markup=build_users_keyboard(True))
         return
 
     # 加密貨幣喚起詞
