@@ -1,0 +1,20 @@
+# 敏感設定與權限名單（切勿上傳至遠端）
+config.json
+permissions.json
+
+# 執行日誌與臨時輸出
+*.log
+bot.log
+nohup.out
+
+# Python 編譯緩存與虛擬環境
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# 系統檔案
+.DS_Store
+.idea/
+.vscode/

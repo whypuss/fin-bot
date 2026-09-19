@@ -1,0 +1,11 @@
+{
+  "telegram_bot_token": "YOUR_TELEGRAM_BOT_TOKEN",
+  "owner_id": 123456789,
+  "ai_api": {
+    "base_url": "https://token.sensenova.cn/v1",
+    "api_key": "YOUR_API_KEY",
+    "model": "sensenova-6.8-flash-lite"
+  },
+  "active_model": "sensenova/sensenova-6.8-flash-lite",
+  "active_role": "market_researcher"
+}
