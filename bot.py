@@ -129,6 +129,36 @@ COMMON_TICKERS = {
     "拼多多": "PDD", "pdd": "PDD"
 }
 
+TOPIC_REGISTRY = {
+    # 會計平帳 gl_reconcile
+    "gl_breaks": "跨系統交易流水與銀行子帳未平差異排查",
+    "gl_transit": "在途資金跨期結算與系統截斷點核對",
+    "gl_entries": "標準借貸平帳與跨期調節分錄指引",
+    "gl_controls": "會計總帳核對內控規則與自動化核銷改善",
+    # 月末關帳 month_end_close
+    "close_checklist": "月度關帳工作流與應計計提檢驗清單",
+    "close_variance": "月度費用支出預算與實際執行差異評論",
+    "close_accruals": "應計費用預提與固定資產折舊滾動審核",
+    "close_risks": "跨期收入確認與計提不足風險排查",
+    # LP 審計 statement_audit
+    "audit_waterfall": "私募基金收益分配瀑布流與門檻回報率審計",
+    "audit_mgmt_fee": "基金管理費與附帶權益Carry計提合規核數",
+    "audit_capital_call": "LP資本調用Capital Call與實繳出資驗證",
+    "audit_quarterly": "基金季度財務報表LP披露審計與簽批意見",
+    # 穿透合規 kyc_screen
+    "kyc_ubo": "跨國離岸架構穿透式最終受益所有人UBO審查",
+    "kyc_pep": "OFAC聯合國國際制裁名單與政治公眾人物篩查",
+    "kyc_redflags": "高風險避稅天堂註冊地與異常資金交易紅旗評估",
+    "kyc_edd": "增強型盡職調查EDD與機構客戶准入合規決策",
+    # 全球貿易 trade
+    "trade_scfi": "海運運價指數與全球航線擁堵趨勢",
+    "trade_tariffs": "跨國關稅壁壘穿透與原產地規則",
+    "trade_nearshoring": "墨西哥越南近岸外包與轉口架構剖析",
+    "trade_fx": "跨境結算與多幣種外匯風險對沖方案",
+    "trade_energy": "關鍵大宗原物料與能源供應鏈安全評估",
+    "trade_redsea": "紅海航道與重要海峽地緣風險應對",
+}
+
 PAGE_SIZE = 5
 
 def save_config():
@@ -287,7 +317,9 @@ def send_message(chat_id: int, text: str, parse_mode: str = "Markdown", reply_ma
             
         try:
             r = requests.post(url, json=payload, timeout=15)
-            if not r.json().get("ok"):
+            res_json = r.json()
+            if not res_json.get("ok"):
+                logger.error(f"Telegram 發送失敗: {res_json.get('description', '')}")
                 payload.pop("parse_mode", None)
                 requests.post(url, json=payload, timeout=15)
         except Exception as e:
@@ -309,7 +341,10 @@ def edit_message(chat_id: int, message_id: int, text: str, parse_mode: str = "Ma
         payload["reply_markup"] = reply_markup
     try:
         r = requests.post(url, json=payload, timeout=10)
-        return r.json().get("ok", False)
+        res_json = r.json()
+        if not res_json.get("ok"):
+            logger.error(f"Telegram 編輯失敗: {res_json.get('description', '')}")
+        return res_json.get("ok", False)
     except Exception as e:
         logger.error(f"編輯訊息失敗: {e}")
         return False
@@ -407,16 +442,16 @@ def make_home_buttons(user_id: int = 0) -> dict:
     elif active_role == "meeting_prep_agent":
         buttons = [
             [
-                {"text": "🤝 生成會面簡報包 (NVDA)", "callback_data": "act:meeting_prep:輝達 (NVIDIA)"},
-                {"text": "💼 高管交談話術 (AAPL)", "callback_data": "act:meeting_prep:蘋果 (Apple)"}
+                {"text": "🤝 生成會面簡報包 (NVDA)", "callback_data": "act:meeting_prep:NVDA"},
+                {"text": "💼 高管交談話術 (AAPL)", "callback_data": "act:meeting_prep:AAPL"}
             ],
             [
-                {"text": "📋 客戶會議建議議程 (TSLA)", "callback_data": "act:meeting_prep:特斯拉 (Tesla)"},
-                {"text": "🎯 決策者背景與關切 (MSFT)", "callback_data": "act:meeting_prep:微軟 (Microsoft)"}
+                {"text": "📋 客戶會議建議議程 (TSLA)", "callback_data": "act:meeting_prep:TSLA"},
+                {"text": "🎯 決策者背景與關切 (MSFT)", "callback_data": "act:meeting_prep:MSFT"}
             ],
             [
-                {"text": "⚡ 準備輝達會談", "callback_data": "act:meeting_prep:輝達 (NVIDIA)"},
-                {"text": "🚀 準備台積電會談", "callback_data": "act:meeting_prep:台積電 (TSMC)"}
+                {"text": "⚡ 準備輝達會談", "callback_data": "act:meeting_prep:NVDA"},
+                {"text": "🚀 準備台積電會談", "callback_data": "act:meeting_prep:TSM"}
             ],
             common_nav,
             common_bottom
@@ -491,12 +526,12 @@ def make_home_buttons(user_id: int = 0) -> dict:
     elif active_role == "gl_reconciler":
         buttons = [
             [
-                {"text": "🔍 未平帳差異排查 (Breaks)", "callback_data": "act:gl_reconcile:跨系統交易流水與銀行子帳未平差異排查"},
-                {"text": "⏳ 在途資金跨期平帳", "callback_data": "act:gl_reconcile:在途資金跨期結算與系統截斷點核對"}
+                {"text": "🔍 未平帳差異排查 (Breaks)", "callback_data": "act:gl_reconcile:gl_breaks"},
+                {"text": "⏳ 在途資金跨期平帳", "callback_data": "act:gl_reconcile:gl_transit"}
             ],
             [
-                {"text": "🛠️ 標準平帳調節分錄建議", "callback_data": "act:gl_reconcile:標準借貸平帳與跨期調節分錄指引"},
-                {"text": "🛡️ 內部對帳防線改善", "callback_data": "act:gl_reconcile:會計總帳核對內控規則與自動化核銷改善"}
+                {"text": "🛠️ 標準平帳調節分錄建議", "callback_data": "act:gl_reconcile:gl_entries"},
+                {"text": "🛡️ 內部對帳防線改善", "callback_data": "act:gl_reconcile:gl_controls"}
             ],
             common_nav,
             common_bottom
@@ -506,12 +541,12 @@ def make_home_buttons(user_id: int = 0) -> dict:
     elif active_role == "month_end_closer":
         buttons = [
             [
-                {"text": "📅 月末關帳清單與排期", "callback_data": "act:month_end_close:月度關帳工作流與應計計提檢驗清單"},
-                {"text": "📊 預算 vs 實際差異分析", "callback_data": "act:month_end_close:月度費用支出預算與實際執行差異評論"}
+                {"text": "📅 月末關帳清單與排期", "callback_data": "act:month_end_close:close_checklist"},
+                {"text": "📊 預算 vs 實際差異分析", "callback_data": "act:month_end_close:close_variance"}
             ],
             [
-                {"text": "⏳ 應計預提項目滾動調整", "callback_data": "act:month_end_close:應計費用預提與固定資產折舊滾動審核"},
-                {"text": "⚠️ 財務關帳風險防範", "callback_data": "act:month_end_close:跨期收入確認與計提不足風險排查"}
+                {"text": "⏳ 應計預提項目滾動調整", "callback_data": "act:month_end_close:close_accruals"},
+                {"text": "⚠️ 財務關帳風險防範", "callback_data": "act:month_end_close:close_risks"}
             ],
             common_nav,
             common_bottom
@@ -521,12 +556,12 @@ def make_home_buttons(user_id: int = 0) -> dict:
     elif active_role == "statement_auditor":
         buttons = [
             [
-                {"text": "⚖️ LP 收益分配瀑布流複核", "callback_data": "act:statement_audit:私募基金收益分配瀑布流與門檻回報率審計"},
-                {"text": "💼 管理費與績效提成核查", "callback_data": "act:statement_audit:基金管理費與附帶權益Carry計提合規核數"}
+                {"text": "⚖️ LP 收益分配瀑布流複核", "callback_data": "act:statement_audit:audit_waterfall"},
+                {"text": "💼 管理費與績效提成核查", "callback_data": "act:statement_audit:audit_mgmt_fee"}
             ],
             [
-                {"text": "📋 資本調用通知書審核", "callback_data": "act:statement_audit:LP資本調用Capital Call與實繳出資驗證"},
-                {"text": "📑 季報向LP披露合規放行", "callback_data": "act:statement_audit:基金季度財務報表LP披露審計與簽批意見"}
+                {"text": "📋 資本調用通知書審核", "callback_data": "act:statement_audit:audit_capital_call"},
+                {"text": "📑 季報向LP披露合規放行", "callback_data": "act:statement_audit:audit_quarterly"}
             ],
             common_nav,
             common_bottom
@@ -536,12 +571,12 @@ def make_home_buttons(user_id: int = 0) -> dict:
     elif active_role == "kyc_screener":
         buttons = [
             [
-                {"text": "🛡️ 穿透式 UBO 實質受益人", "callback_data": "act:kyc_screen:跨國離岸架構穿透式最終受益所有人UBO審查"},
-                {"text": "🚨 國際制裁與 PEP 黑名單", "callback_data": "act:kyc_screen:OFAC聯合國國際制裁名單與政治公眾人物篩查"}
+                {"text": "🛡️ 穿透式 UBO 實質受益人", "callback_data": "act:kyc_screen:kyc_ubo"},
+                {"text": "🚨 國際制裁與 PEP 黑名單", "callback_data": "act:kyc_screen:kyc_pep"}
             ],
             [
-                {"text": "⚠️ 洗錢高風險紅旗預警", "callback_data": "act:kyc_screen:高風險避稅天堂註冊地與異常資金交易紅旗評估"},
-                {"text": "📋 客戶准入審批建議 (EDD)", "callback_data": "act:kyc_screen:增強型盡職調查EDD與機構客戶准入合規決策"}
+                {"text": "⚠️ 洗錢高風險紅旗預警", "callback_data": "act:kyc_screen:kyc_redflags"},
+                {"text": "📋 客戶准入審批建議 (EDD)", "callback_data": "act:kyc_screen:kyc_edd"}
             ],
             common_nav,
             common_bottom
@@ -593,16 +628,16 @@ def make_home_buttons(user_id: int = 0) -> dict:
     elif active_role == "trade_expert":
         buttons = [
             [
-                {"text": "🚢 全球海運與運價指數 (SCFI/BDI)", "callback_data": "act:trade:海運運價指數與全球航線擁堵趨勢"},
-                {"text": "📦 跨國關稅壁壘與出海合規", "callback_data": "act:trade:跨國關稅壁壘穿透與原產地規則"}
+                {"text": "🚢 全球海運與運價指數 (SCFI/BDI)", "callback_data": "act:trade:trade_scfi"},
+                {"text": "📦 跨國關稅壁壘與出海合規", "callback_data": "act:trade:trade_tariffs"}
             ],
             [
-                {"text": "🌐 墨西哥/越南近岸轉口外包", "callback_data": "act:trade:墨西哥越南近岸外包與轉口架構剖析"},
-                {"text": "💱 匯率波動與外匯對沖 (FX)", "callback_data": "act:trade:跨境結算與多幣種外匯風險對沖方案"}
+                {"text": "🌐 墨西哥/越南近岸轉口外包", "callback_data": "act:trade:trade_nearshoring"},
+                {"text": "💱 匯率波動與外匯對沖 (FX)", "callback_data": "act:trade:trade_fx"}
             ],
             [
-                {"text": "🛢️ 關鍵大宗與能源貿易流向", "callback_data": "act:trade:關鍵大宗原物料與能源供應鏈安全評估"},
-                {"text": "⚓ 紅海航道與地緣咽喉危機", "callback_data": "act:trade:紅海航道與重要海峽地緣風險應對"}
+                {"text": "🛢️ 關鍵大宗與能源貿易流向", "callback_data": "act:trade:trade_energy"},
+                {"text": "⚓ 紅海航道與地緣咽喉危機", "callback_data": "act:trade:trade_redsea"}
             ],
             [
                 {"text": "⚡ 查航運以星 ZIM", "callback_data": "pick:ZIM"},
@@ -951,6 +986,7 @@ def format_quote_card(data: dict) -> str:
 
 def execute_action(chat_id: int, action: str, target: str, user_id: int = 0):
     effective_user = user_id if user_id != 0 else chat_id
+    target = TOPIC_REGISTRY.get(target, target)
     send_chat_action(chat_id, "typing")
     current_system_prompt = get_role_prompt(active_role)
     
@@ -1334,8 +1370,8 @@ def execute_action(chat_id: int, action: str, target: str, user_id: int = 0):
                     {"text": "📦 查美森輪船 MATX", "callback_data": "pick:MATX"}
                 ],
                 [
-                    {"text": "🌐 墨西哥/越南近岸轉口外包", "callback_data": "act:trade:墨西哥越南近岸外包與轉口架構剖析"},
-                    {"text": "💱 跨境外匯對沖方案", "callback_data": "act:trade:跨境結算與多幣種外匯風險對沖方案"}
+                    {"text": "🌐 墨西哥/越南近岸轉口外包", "callback_data": "act:trade:trade_nearshoring"},
+                    {"text": "💱 跨境外匯對沖方案", "callback_data": "act:trade:trade_fx"}
                 ],
                 [
                     {"text": "🎭 切換其他專家角色", "callback_data": "menu:role_picker"},
@@ -1507,8 +1543,12 @@ def execute_action(chat_id: int, action: str, target: str, user_id: int = 0):
         gl_nav = {
             "inline_keyboard": [
                 [
-                    {"text": "📅 月末關帳清單", "callback_data": "act:month_end_close:月度關帳工作流與應計計提檢驗清單"},
-                    {"text": "⚖️ LP 收益審計", "callback_data": "act:statement_audit:私募基金收益分配瀑布流與門檻回報率審計"}
+                    {"text": "📅 月末關帳清單", "callback_data": "act:month_end_close:close_checklist"},
+                    {"text": "⚖️ LP 收益審計", "callback_data": "act:statement_audit:audit_waterfall"}
+                ],
+                [
+                    {"text": "⏳ 在途資金對帳", "callback_data": "act:gl_reconcile:gl_transit"},
+                    {"text": "🛠️ 調節分錄建議", "callback_data": "act:gl_reconcile:gl_entries"}
                 ],
                 [
                     {"text": "🎭 切換專家角色", "callback_data": "menu:role_picker"},
@@ -1525,7 +1565,23 @@ def execute_action(chat_id: int, action: str, target: str, user_id: int = 0):
         send_chat_action(chat_id, "typing")
         prompt = build_month_end_close_prompt(target)
         ans = llm.chat_complete(current_system_prompt, prompt)
-        send_message(chat_id, f"📅 *月末關帳檢查清單與費用差異評論*：\n───────────────────────\n{ans}", reply_markup=make_home_buttons())
+        close_nav = {
+            "inline_keyboard": [
+                [
+                    {"text": "📊 預算 vs 實際差異", "callback_data": "act:month_end_close:close_variance"},
+                    {"text": "⏳ 應計預提項目滾動", "callback_data": "act:month_end_close:close_accruals"}
+                ],
+                [
+                    {"text": "🔍 未平帳差異排查", "callback_data": "act:gl_reconcile:gl_breaks"},
+                    {"text": "⚖️ LP 收益分配審計", "callback_data": "act:statement_audit:audit_waterfall"}
+                ],
+                [
+                    {"text": "🎭 切換專家角色", "callback_data": "menu:role_picker"},
+                    {"text": "🏠 返回專屬首頁", "callback_data": "menu:home"}
+                ]
+            ]
+        }
+        send_message(chat_id, f"📅 *月末關帳檢查清單與費用差異評論*：\n───────────────────────\n{ans}", reply_markup=close_nav)
         return
 
     # 31. 官方核心工作流：LP 收益分配審計 (Statement Audit)
@@ -1534,7 +1590,23 @@ def execute_action(chat_id: int, action: str, target: str, user_id: int = 0):
         send_chat_action(chat_id, "typing")
         prompt = build_statement_audit_prompt(target)
         ans = llm.chat_complete(current_system_prompt, prompt)
-        send_message(chat_id, f"⚖️ *LP 收益分配瀑布流與管理費審計意見*：\n───────────────────────\n{ans}", reply_markup=make_home_buttons())
+        audit_nav = {
+            "inline_keyboard": [
+                [
+                    {"text": "💼 管理費績效提成核查", "callback_data": "act:statement_audit:audit_mgmt_fee"},
+                    {"text": "📋 資本調用通知審核", "callback_data": "act:statement_audit:audit_capital_call"}
+                ],
+                [
+                    {"text": "📑 季報LP合規放行", "callback_data": "act:statement_audit:audit_quarterly"},
+                    {"text": "🔍 未平帳差異排查", "callback_data": "act:gl_reconcile:gl_breaks"}
+                ],
+                [
+                    {"text": "🎭 切換專家角色", "callback_data": "menu:role_picker"},
+                    {"text": "🏠 返回專屬首頁", "callback_data": "menu:home"}
+                ]
+            ]
+        }
+        send_message(chat_id, f"⚖️ *LP 收益分配瀑布流與管理費審計意見*：\n───────────────────────\n{ans}", reply_markup=audit_nav)
         return
 
     # 32. 官方核心工作流：穿透式 KYC/AML 審查 (KYC Screen)
@@ -1546,7 +1618,11 @@ def execute_action(chat_id: int, action: str, target: str, user_id: int = 0):
         kyc_nav = {
             "inline_keyboard": [
                 [
-                    {"text": "⚠️ 標的下行風險排查", "callback_data": "top:risks:合規與下行風險排查"},
+                    {"text": "🚨 制裁與PEP名單", "callback_data": "act:kyc_screen:kyc_pep"},
+                    {"text": "⚠️ 洗錢紅旗預警", "callback_data": "act:kyc_screen:kyc_redflags"}
+                ],
+                [
+                    {"text": "📋 客戶准入建議", "callback_data": "act:kyc_screen:kyc_edd"},
                     {"text": "🔍 360° 盡調清單", "callback_data": "act:dd_checklist:NVDA"}
                 ],
                 [
@@ -1652,9 +1728,9 @@ def handle_callback(cb: dict):
         r_name = r_info["name"] if r_info else new_role
         answer_callback(cb_id, f"✅ 已切換為：{r_name}，專屬工具方塊已更新！")
         if message_id:
-            edit_message(chat_id, message_id, get_home_text(), reply_markup=make_home_buttons())
+            edit_message(chat_id, message_id, get_home_text(), reply_markup=make_home_buttons(from_user))
         else:
-            send_message(chat_id, get_home_text(), reply_markup=make_home_buttons())
+            send_message(chat_id, get_home_text(), reply_markup=make_home_buttons(from_user))
         return
 
     # 模型選擇面板
