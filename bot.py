@@ -127,7 +127,13 @@ COMMON_TICKERS = {
     "西方石油": "OXY", "oxy": "OXY",
     "安達保險": "CB", "cb": "CB",
     "新興市場": "IEMG", "iemg": "IEMG",
-    "拼多多": "PDD", "pdd": "PDD"
+    "拼多多": "PDD", "pdd": "PDD",
+    # 國際重要指數與大宗期貨
+    "韓國股市": "^KS11", "韓國指數": "^KS11", "kospi": "^KS11",
+    "英國股市": "^FTSE", "英國富時": "^FTSE", "ftse": "^FTSE",
+    "中東指數": "^TASI.SR", "沙特指數": "^TASI.SR", "tasi": "^TASI.SR",
+    "原油期貨": "CL=F", "wti原油": "CL=F", "布倫特原油": "BZ=F", "布蘭特": "BZ=F",
+    "黃金期貨": "GC=F", "白銀期貨": "SI=F"
 }
 
 TOPIC_REGISTRY = {
@@ -655,7 +661,7 @@ def make_home_buttons(user_id: int = 0) -> dict:
             common_bottom
         ]
 
-    top_row = [{"text": "🌐 全球重要指數 · 比特幣 · 金銀看板", "callback_data": "act:macro_snapshot:all"}]
+    top_row = [{"text": "🌐 全球股指 · 原油 · 金銀 · 比特幣看板", "callback_data": "act:macro_snapshot:all"}]
     return {"inline_keyboard": [top_row] + buttons}
 
 def get_home_text() -> str:
@@ -1011,7 +1017,7 @@ def execute_action(chat_id: int, action: str, target: str, user_id: int = 0):
         idx_down = len(indices) - idx_up
         
         summary_lines = [
-            "🌐 *全球核心股票指數 · 比特幣 · 金銀價格快報*",
+            "🌐 *全球重要指數 · 原油期貨 · 金銀 · 比特幣看板*",
             "───────────────────────",
             tbl,
             "───────────────────────",
@@ -1019,6 +1025,14 @@ def execute_action(chat_id: int, action: str, target: str, user_id: int = 0):
             f"• 📈 *全球股指*：{len(indices)}大核心指數中 {idx_up} 漲 {idx_down} 跌，全球權益資產動能 {'偏強' if idx_up >= idx_down else '震盪受壓'}。"
         ]
         
+        oils = [it for it in data_list if it["category"] == "原油"]
+        wti_item = next((it for it in oils if "CL=F" in it.get("symbol", "")), None)
+        brent_item = next((it for it in oils if "BZ=F" in it.get("symbol", "")), None)
+        if wti_item and brent_item:
+            w_sign = "+" if wti_item["change_pct"] > 0 else ""
+            b_sign = "+" if brent_item["change_pct"] > 0 else ""
+            summary_lines.append(f"• 🛢️ *國際原油期貨*：WTI `${wti_item['price']:.2f}` ({w_sign}{wti_item['change_pct']}%) ｜ 布蘭特 `${brent_item['price']:.2f}` ({b_sign}{brent_item['change_pct']}%)，大宗能源通膨定價反應。")
+
         btc_item = next((it for it in crypto if "BTC" in it.get("symbol", "")), None)
         if btc_item:
             btc_sign = "+" if btc_item["change_pct"] > 0 else ""
@@ -1898,7 +1912,13 @@ def handle_message(update: dict):
         return
 
     # 全球核心股票指數、比特幣、金銀快報喚起
-    if any(kw in text.lower() for kw in ["全球指數", "全球股指", "重要指數", "主要指數", "金銀價格", "黃金白銀", "比特幣金銀", "大盤表格", "全球市場快報", "大盤概覽", "全球行情"]):
+    if any(kw in text.lower() for kw in [
+        "全球指數", "全球股指", "重要指數", "主要指數", "金銀價格", "黃金白銀", 
+        "比特幣金銀", "大盤表格", "全球市場快報", "大盤概覽", "全球行情",
+        "韓國股票", "韓國股市", "kospi", "中東指數", "沙特指數", "沙烏地", 
+        "英國股市", "英國股票", "富時100", "ftse", "油價", "原油", "期貨油價", 
+        "wti", "布倫特", "布蘭特", "天然氣"
+    ]):
         execute_action(chat_id, "macro_snapshot", "all")
         return
 
