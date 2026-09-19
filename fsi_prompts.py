@@ -1,7 +1,6 @@
 """
-金融專業服務系統提示詞模組
-提取並轉化自 anthropics/financial-services (Claude for Financial Services)
-包含六大官方 Named Agents 專家角色體系，全面強制全中文繁體輸出
+FinBot 智能金融服務投研 Prompt 核心庫
+全面強制全中文繁體輸出與八大專家角色體系
 """
 
 MANDATORY_LANGUAGE_RULE = """

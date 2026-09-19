@@ -16,7 +16,7 @@ FinBot 是一套基於金融服務大模型架構與現代化 Telegram 互動體
 - 支援任意標的即時檢索、深度圖表與多維度估值模型一鍵觸發。
 
 ### 2. 🧠 雙引擎模型選擇器 (Antigravity + 高速 API)
-- **原生 Antigravity 驅動**：深度整合 Google DeepMind 最新 `Gemini 3.8 Flash (Low)`、`Gemini 3.7 Thinking`、`Claude Sonnet 4.6`、`Claude Opus 4.6` 等前沿模型。
+- **原生 Antigravity 驅動**：深度整合 Google DeepMind 最新 `Gemini 3.8 Flash (Low)`、`Gemini 3.7 Thinking` 等前沿推理模型。
 - **商用 API 雙備援**：支援 SenseNova 等高速商用 API 作為備用線路，具備自動降級 (Failover) 與重試機制。
 - **分頁切換面板**：隨時在 Telegram 內透過按鈕切換推理模型。
 

@@ -394,7 +394,7 @@ def make_home_buttons() -> dict:
 
 def get_home_text() -> str:
     r_info = next((r for r in FINANCIAL_ROLES if r["id"] == active_role), FINANCIAL_ROLES[0])
-    return f"""🏛️ *Claude Financial Services 智能金融顧問*
+    return f"""🏛️ *FinBot 智能金融與宏觀投研顧問*
 ───────────────────────
 👤 *當前執勤專家*：*{r_info['name']}*
 💼 *英文頭銜*：`{r_info['title']}`
@@ -579,7 +579,7 @@ def get_model_panel_text() -> str:
 模型後端：`{backend_desc}`
 模型說明：_{info.get('desc')}_
 
-💡 支援 Gemini 3.8/3.7、Claude Sonnet/Opus 4.6、GPT-OSS 與 SenseNova。
+💡 支援雙引擎模型無縫切換（Antigravity 官方前沿推理模型與商用高速 API）。
 點擊下方小方塊可立即切換模型："""
 
 def make_ticker_buttons(symbol: str) -> dict:
